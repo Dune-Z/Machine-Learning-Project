@@ -100,6 +100,7 @@ def proc_size(df: pd.DataFrame):
     df['size'] = df['size'].astype('string', copy=False)
     pos = df['size'].str.match(r'^None|NONE|-1$')
     df.loc[pos, 'size'] = np.nan
+    df['size'] = df['size'].astype('category', copy=False)
     return df
 
 
