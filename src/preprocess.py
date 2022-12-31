@@ -95,9 +95,10 @@ def proc_item_name(df: pd.DataFrame):
 def proc_size(df: pd.DataFrame):
     """
     Preprocess the feature 'size'.
+    - Set 'None', 'NONE', '-1' as NaN
     """
     df['size'] = df['size'].astype('string', copy=False)
-    pos = df['size'].str.match(r'^None|NONE$')
+    pos = df['size'].str.match(r'^None|NONE|-1$')
     df.loc[pos, 'size'] = np.nan
     return df
 
