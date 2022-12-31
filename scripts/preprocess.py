@@ -21,6 +21,7 @@ class Preprocess:
         self._bust_size_split()
         self._body_type_to_cat()
         self._preprocess_age()
+        self._preprocess_size()
         self._preprocess_price()
         self._preprocess_rent_for()
         self._preprocess_item_name()
@@ -141,7 +142,12 @@ class Preprocess:
         Split item name by '\n', which fairly reduce the category number.
         """
         splitting = lambda x: x.split('\n') if '\n' in x else list(x) + [np.nan]
-        self.df['item_name'] = [splitting(content) for content in self.df.item_name]
+        item_names = [splitting(content) for content in self.df.item_name]
+        item_names = [content + ['None'] if len(content) == 1 else content for content in item_names]
+        item_names = list(map(list, zip(*item_names)))
+        self.df.insert(0, 'item_name1', np.array(item_names[0]))
+        self.df.insert(1, 'item_name2', np.array(item_names[1]))
+        self.df.drop('item_names', axis=1, inplace=True)
 
     def _preprocess_rent_for(self):
         """
