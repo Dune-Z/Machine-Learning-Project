@@ -108,7 +108,9 @@ def proc_price(df: pd.DataFrame):
     Preprocess the feature 'price'.
     - Remove the dollar sign '$'.
     """
-    df.price = df.price.apply(lambda x: float(x[1:]))
+    df.price = df.price.astype('string', copy=False)
+    df.price = df.price.str.removeprefix('$')
+    df.price = df.price.astype(float, copy=False)
     return df
 
 
