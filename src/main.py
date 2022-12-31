@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+'''
+Main script.
+'''
+
 from preprocess import Preprocess
 PATH = '../../train_data_all.json'
 
