@@ -153,7 +153,7 @@ class Preprocess:
         """
         Already clean, convert column value type to category.
         """
-        self.df['rent_for'] = self.df.rented_for.astype('category', copy=False)
+        self.df['rented_for'] = self.df.rented_for.astype('category', copy=False)
 
     def _preprocess_price(self):
         """
