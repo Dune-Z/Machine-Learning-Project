@@ -147,7 +147,7 @@ class Preprocess:
         item_names = list(map(list, zip(*item_names)))
         self.df.insert(0, 'item_name1', np.array(item_names[0]))
         self.df.insert(1, 'item_name2', np.array(item_names[1]))
-        self.df.drop('item_names', axis=1, inplace=True)
+        self.df.drop('item_name', axis=1, inplace=True)
 
     def _preprocess_rent_for(self):
         """
