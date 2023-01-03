@@ -6,17 +6,18 @@ def fetch_train_data(
     path='../data/train_data.json',
     url='http://miralab.ai/courses/ML2022Fall/project/train_data_all.json'
 ) -> pd.DataFrame:
-    import os, requests, tqdm
-    if os.path.exists(path):
-        return pd.read_json(path)
-    print(f'Downloading {path} from {url}')
-    response = requests.get(url, stream=True)
-    length = int(response.headers.get('content-length', 0))
-    with open(path, 'wb') as file:
-        iterator = response.iter_content(chunk_size=1024)
-        iterator = tqdm(iterator, total=length // 1024, unit='KB')
-        for data in iterator:
-            file.write(data)
+    import os, requests
+    from tqdm import tqdm
+    if not os.path.exists(path):
+        print(f'Downloading {path} from {url}')
+        response = requests.get(url, stream=True)
+        length = int(response.headers.get('content-length', 0))
+        with open(path, 'wb') as file:
+            iterator = response.iter_content(chunk_size=1024)
+            iterator = tqdm(iterator, total=length // 1024, unit='KB')
+            for data in iterator:
+                file.write(data)
+    return pd.read_json(path)
 
 
 def describe_data(df: pd.DataFrame) -> pd.DataFrame:
