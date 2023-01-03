@@ -4,18 +4,16 @@ import numpy as np
 
 class Preprocessor:
 
-    train_df: pd.DataFrame = None
-    test_df: pd.DataFrame = None
-
     def __init__(self):
         pass
 
     def fit_transform(self, train_df: pd.DataFrame):
         """
-        Fit the model using the training data.
+        Fit all transformers and transform the training data.
         """
         self.train_df = train_df
         # Do something
+        return train_df
 
     def transform(self, test_df: pd.DataFrame):
         """
