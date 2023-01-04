@@ -124,8 +124,9 @@ class Preprocess:
         # Convert all non-pure number item into NaN
         self.df.loc[~self.df.age.str.match(r'^[0-9]*$'), 'age'] = np.nan
         # Convert value >= 100 item into NaN
-        self.df.loc[self.df['age'].astype(float) >= 100, 'age'] = np.nan  
-
+        self.df['age'] = self.df['age'].astype(float)
+        self.df.loc[self.df['age'] >= 100, 'age'] = np.nan
+        
     def _preprocess_usually_wear(self):
         """
         Data preprocess: age column\n
