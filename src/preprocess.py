@@ -5,9 +5,11 @@ import numpy as np
 class Preprocessor:
 
     def __init__(self):
+        self.train_df = None
+        self.test_df = None
         pass
 
-    def fit_transform(self, train_df: pd.DataFrame):
+    def fit_transform(self, train_df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit all transformers and transform the training data.
         """
@@ -15,46 +17,58 @@ class Preprocessor:
         # Do something
         return train_df
 
-    def transform(self, test_df: pd.DataFrame):
+    def cleanse(self, df: pd.DataFrame, is_train=False) -> pd.DataFrame:
+        """
+        Cleanse the training or testing data.
+        """
+        if is_train:
+            self.train_df = df
+        else:
+            self.test_df = df
+
+        df = cleanse_before(df, is_train=is_train)
+        # label
+        df = cleanse_fit(df)
+        # item attributes
+        df = cleanse_item_name(df)
+        df = cleanse_size(df)
+        df = cleanse_price(df)
+        # transaction info
+        df = cleanse_rented_for(df)
+        df = cleanse_usually_wear(df)
+        # user attributes
+        if is_train:
+            df = cleanse_user_name(df)
+        df = cleanse_age(df)
+        df = cleanse_height(df)
+        df = cleanse_weight(df)
+        df = cleanse_body_type(df)
+        df = cleanse_bust_size(df)
+        # feedback
+        if is_train:
+            df = cleanse_review_summary(df)
+            df = cleanse_review(df)
+            df = cleanse_rating(df)
+
+        df = cleanse_after(df, is_train=is_train)
+        return df
+
+    def transform(self, test_df: pd.DataFrame) -> pd.DataFrame:
         """
         Transform the testing data.
         """
         self.test_df = test_df
-        test_df = proc_before(test_df, is_train=False)
-        test_df = proc_fit(test_df)
-        test_df = proc_item_name(test_df)
-        test_df = proc_size(test_df)
-        test_df = proc_price(test_df)
-        test_df = proc_rented_for(test_df)
-        test_df = proc_usually_wear(test_df)
-        test_df = proc_age(test_df)
-        test_df = proc_height(test_df)
-        test_df = proc_weight(test_df)
-        test_df = proc_body_type(test_df)
-        test_df = proc_bust_size(test_df)
-        test_df = proc_after(test_df)
+        # Do something
         return test_df
 
 
-def proc_before(df: pd.DataFrame, is_train=False):
+def cleanse_before(df: pd.DataFrame, is_train=False):
     """
-    This function is called before processing each column.
+    This function is called before cleansing each column.
     - Change column order for consistency.
     - Drop rows corrupted by the byte-order mark '\\udeff'.
     - Replace empty strings with NaN.
     """
-    # Change column order for consistency.
-    if is_train:
-        df = df[[
-            'fit', 'item_name', 'size', 'price', 'user_name', 'rented_for',
-            'usually_wear', 'age', 'height', 'weight', 'body_type',
-            'bust_size', 'review_summary', 'review', 'rating'
-        ]].copy()
-    else:
-        df = df[[
-            'fit', 'item_name', 'size', 'price', 'rented_for', 'usually_wear',
-            'age', 'height', 'weight', 'body_type', 'bust_size'
-        ]].copy()
     # Drop rows corrupted by the byte-order mark '\\udeff'.
     df.drop(df[df.item_name.str.contains('\ufeff')].index, inplace=True)
     # Replace empty strings with NaN.
@@ -62,24 +76,24 @@ def proc_before(df: pd.DataFrame, is_train=False):
     return df
 
 
-def proc_fit(df: pd.DataFrame):
+def cleanse_fit(df: pd.DataFrame):
     """
-    Preprocess the label 'fit'.
+    Cleanse the label 'fit'.
     - Set value type as category.
     """
     df.fit = df.fit.astype('category', copy=False)
     return df
 
 
-def proc_item_name(df: pd.DataFrame):
+def cleanse_item_name(df: pd.DataFrame):
     """
-    Preprocess the feature 'item_name'.
+    Cleanse the feature 'item_name'.
     - Split strings by '\n', yielding two columns: 'item_name1' and 'item_name2'.
     """
     # Split strings by '\n'.
     new_cols = df.item_name.str.split('\n', expand=True)
-    df.insert(1, 'item_name1', new_cols[0])
-    df.insert(2, 'item_name2', new_cols[1])
+    df['item_name1'] = new_cols[0]
+    df['item_name2'] = new_cols[1]
     df.drop(columns=['item_name'], inplace=True)
     #
     pos = df.item_name1.str.endswith('"')
@@ -90,9 +104,9 @@ def proc_item_name(df: pd.DataFrame):
     return df
 
 
-def proc_size(df: pd.DataFrame):
+def cleanse_size(df: pd.DataFrame):
     """
-    Preprocess the feature 'size'.
+    Cleanse the feature 'size'.
     - Set 'None', 'NONE', '-1' as NaN
     """
     df['size'] = df['size'].astype('string', copy=False)
@@ -102,47 +116,61 @@ def proc_size(df: pd.DataFrame):
     return df
 
 
-def proc_price(df: pd.DataFrame):
+def cleanse_price(df: pd.DataFrame):
     """
-    Preprocess the feature 'price'.
+    Cleanse the feature 'price'.
+    - Set invalid values as NaN.
     - Remove the dollar sign '$'.
     """
+    # Set invalid values as NaN.
     df.price = df.price.astype('string', copy=False)
+    pos = df.price.str.match(r'^\$\d+$')
+    df.loc[~pos, 'price'] = np.nan
+    # Remove the dollar sign '$'.
     df.price = df.price.str.removeprefix('$')
     df.price = df.price.astype(float, copy=False)
     return df
 
 
-def proc_rented_for(df: pd.DataFrame):
+def cleanse_rented_for(df: pd.DataFrame):
     """
-    Preprocess the feature 'rented_for'.
+    Cleanse the feature 'rented_for'.
     - Set value type as category.
     """
     df.rented_for = df.rented_for.astype('category', copy=False)
     return df
 
 
-def proc_usually_wear(df: pd.DataFrame):
+def cleanse_usually_wear(df: pd.DataFrame):
     """
-    Preprocess the feature 'usually_wear'.
+    Cleanse the feature 'usually_wear'.
     - Set invalid values as NaN.
     """
     df.usually_wear = df.usually_wear.astype('string', copy=False)
-    pos = df.usually_wear.str.match(r'^[0-9]*$')
+    pos = df.usually_wear.str.match(r'^\d+$')
     df.loc[~pos, 'usually_wear'] = np.nan
     df.usually_wear = df.usually_wear.astype(float, copy=False)
     return df
 
 
-def proc_age(df: pd.DataFrame):
+def cleanse_user_name(df: pd.DataFrame):
     """
-    Preprocess the feature 'age'.
+    Cleanse the feature 'user_name'.
+    - Set value type as category.
+    """
+    df.user_name = df.user_name.astype('category', copy=False)
+    return df
+
+
+def cleanse_age(df: pd.DataFrame):
+    """
+    Cleanse the feature 'age'.
     - Set invalid values as NaN.
     - Set outliers (>=100) as NaN.
     """
     # Set invalid values as NaN.
     df.age = df.age.astype('string', copy=False)
-    pos = df.age.str.match(r'^[0-9]*$')
+    pos = df.age.str.match(r'^\d+$')
     df.loc[~pos, 'age'] = np.nan
     df.age = df.age.astype(float, copy=False)
     # Set outliers (>=100) to NaN.
@@ -150,9 +178,9 @@ def proc_age(df: pd.DataFrame):
     return df
 
 
-def proc_height(df: pd.DataFrame):
+def cleanse_height(df: pd.DataFrame):
     """
-    Preprocess the feature 'height'.
+    Cleanse the feature 'height'.
     - Set invalid values as NaN.
     - Convert height values from feet and inches to centimeters.
     - Set outliers (>200 cm) as NaN.
@@ -171,9 +199,9 @@ def proc_height(df: pd.DataFrame):
     return df
 
 
-def proc_weight(df: pd.DataFrame):
+def cleanse_weight(df: pd.DataFrame):
     """
-    Preprocess the feature 'weight'.
+    Cleanse the feature 'weight'.
     - Set invalid values as NaN.
     - Convert weight values from pounds to kilograms.
     - Set outliers (<30 kg or >150 kg) as NaN
@@ -193,23 +221,24 @@ def proc_weight(df: pd.DataFrame):
     return df
 
 
-def proc_body_type(df: pd.DataFrame):
+def cleanse_body_type(df: pd.DataFrame):
     """
-    Preprocess the feature 'body_type'.
+    Cleanse the feature 'body_type'.
     - Set value type as category.
     """
     df.body_type = df.body_type.astype('category', copy=False)
     return df
 
 
-def proc_bust_size(df: pd.DataFrame):
+def cleanse_bust_size(df: pd.DataFrame):
     """
-    Preprocess the feature 'bust_size'.
+    Cleanse the feature 'bust_size'.
     - Set invalid values as NaN.
     - Split 'bust_size' into 2 features:
         - 'bust_size': number part in inches, as float
         - 'cup_size': letter part, as ordinal category
     """
+    # Set invalid values as NaN.
     df.bust_size = df.bust_size.astype('string', copy=False)
     pos = df.bust_size.str.match(r'^\d+[A-K].*$')
     df.loc[~pos, 'bust_size'] = np.nan
@@ -225,8 +254,57 @@ def proc_bust_size(df: pd.DataFrame):
     return df
 
 
-def proc_after(df: pd.DataFrame):
+def cleanse_review_summary(df: pd.DataFrame):
     """
-    This function is called after processing each column.
+    Cleanse the feature 'review_summary'.
+    - Set value type as string.
     """
+    df.review_summary = df.review_summary.astype('string', copy=False)
+    return df
+
+
+def cleanse_review(df: pd.DataFrame):
+    """
+    Cleanse the feature 'review'.
+    - Set value type as string.
+    """
+    df.review = df.review.astype('string', copy=False)
+    return df
+
+
+def cleanse_rating(df: pd.DataFrame):
+    """
+    Cleanse the feature 'rating'.
+    - Set invalid values as NaN.
+    """
+    # Set invalid values as NaN.
+    df.rating = df.rating.astype('string', copy=False)
+    pos = df.rating.str.match(r'^\d+$')
+    df.loc[~pos, 'rating'] = np.nan
+    df.rating = df.rating.astype(float, copy=False)
+    df.loc[df.rating < 1, 'rating'] = np.nan
+    df.loc[df.rating > 5, 'rating'] = np.nan
+    return df
+
+
+def cleanse_after(df: pd.DataFrame, is_train=False):
+    """
+    This function is called after cleansing each column.
+    - Change column order for consistency.
+    """
+    if is_train:
+        df = df.reindex(columns=[
+            'fit', 'item_name1', 'item_name2', 'size', 'price', 'user_name',
+            'rented_for', 'usually_wear', 'age', 'height', 'weight',
+            'body_type', 'bust_size', 'cup_size', 'review_summary', 'review',
+            'rating'
+        ],
+                        copy=False)
+    else:
+        df = df.reindex(columns=[
+            'fit', 'item_name1', 'item_name2', 'size', 'price', 'rented_for',
+            'usually_wear', 'age', 'height', 'weight', 'body_type',
+            'bust_size', 'cup_size'
+        ],
+                        copy=False)
     return df
