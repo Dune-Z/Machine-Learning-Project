@@ -4,3 +4,4 @@ notebooks
 data/modcloth_data.json.gz
 data/renttherunway_data.json.gz
 data/train_data.json
+logs.log
