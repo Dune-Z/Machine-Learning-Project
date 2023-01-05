@@ -33,4 +33,17 @@
 
 ## TODO
 
-- [ ] Implement an oversampling method to deal with the imbalanced dataset
+-   [ ] Implement an oversampling method to deal with the imbalanced dataset
+
+## Reference
+
+Please share your references here.
+
+| Title                                                                                                                                                                                                                                                                                                                | Comment             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| _BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) (Minneapolis, Minnesota, Jun. 2019), 4171–4186._ | Refered in homepage |
+| _Convolutional Neural Networks for Sentence Classification. Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP) (Doha, Qatar, Oct. 2014), 1746–1751._                                                                                                                     | Refered in homepage |
+| _Recommending Product Sizes to Customers. Proceedings of the Eleventh ACM Conference on Recommender Systems (New York, NY, USA, Aug. 2017), 243–250._                                                                                                                                                                |                     |
+| _Decomposing fit semantics for product size recommendation in metric spaces. Proceedings of the 12th ACM Conference on Recommender Systems (New York, NY, USA, Sep. 2018), 422–426._                                                                                                                                 | Original dataset    |
+| _Learning Embeddings for Product Size Recommendations. (2019), 9._                                                                                                                                                                                                                                                   |                     |
+| _PreSizE: Predicting Size in E-Commerce using Transformers. Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval (New York, NY, USA, Jul. 2021), 255–264._                                                                                                |                     |
