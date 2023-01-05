@@ -94,7 +94,6 @@ def cleanse_item_name(df: pd.DataFrame):
     new_cols = df.item_name.str.split('\n', expand=True)
     df['item_name1'] = new_cols[0]
     df['item_name2'] = new_cols[1]
-    df.drop(columns=['item_name'], inplace=True)
     #
     pos = df.item_name1.str.endswith('"')
     df.loc[pos, 'item_name2'] = df.item_name1[pos].str.removesuffix('"')
