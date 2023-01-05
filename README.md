@@ -1,9 +1,36 @@
-# Machine-Learning-Project
+# Machine Learning Project
 
-> **Zhu, Nov 30**:
->
-> You can run [this notebook](notebooks/zyq%20Nov%2030.ipynb) or [this script](scripts/download.py) to get the datasets.
+## File tree
 
-> **Zhu, Jan 3**:
->
-> The dataset can now be loaded by `fetch_train_data()` in [utils.py](src/utils.py), where I decide to write other utilities like calculating the macro-f1 and comparing models.
+```
+.
+├── data                        # Auto-downloaded datasets
+│   └── ...
+├── notebooks                   # Your notebooks with experimental results
+│   └── ...
+├── models                      # Trained models (probably saved with pickle)
+│   └── ...
+├── report                      # Project report (including source files, figures, etc.)
+│   └── ...
+├── scripts                     # Utility scripts (download, deploy, etc.)
+│   └── ...
+└── src                         # Source files (including train.py & test.py)
+    └── ...
+```
+
+### Description of each file
+
+| File                   | Description                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `data/train_data.json` | The original dataset auto-downloaded by `fetch_train_data()` in `src/utils.py`                                   |
+| `scripts/download.py`  | Script to download all datasets (MiraLab's version, UCSD's version)                                              |
+| `src/train.py`         | Script to train our model (not necessary, since we may finish training all in notebooks)                         |
+| `src/test.py`          | Script to test our model (needed to generate submission file)                                                    |
+| `src/models.py`        | Implementation of our model(s), should be wrapped as a class                                                     |
+| `src/preprocess.py`    | Source code for data cleansing, transforming, and feature engineering                                            |
+| `src/utils.py`         | Utility functions that cannot be put in other source files (e.g. `fetch_train_data()`)                           |
+| `src/main.ipynb`       | An example notebook to show how to import and use our library. You may have your own versions in other branches. |
+
+## TODO
+
+- [ ] Implement an oversampling method to deal with the imbalanced dataset
