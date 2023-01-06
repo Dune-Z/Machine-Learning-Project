@@ -29,7 +29,7 @@ def describe_data(df: pd.DataFrame) -> pd.DataFrame:
     return desc_df
 
 
-def evaluate_model(y_true, y_pred) -> pd.DataFrame:
+def evaluate_model(y_true, y_pred, index='result') -> pd.DataFrame:
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
     score_df = pd.DataFrame()
     score_df['accuracy'] = [accuracy_score(y_true, y_pred)]
@@ -45,6 +45,7 @@ def evaluate_model(y_true, y_pred) -> pd.DataFrame:
     score_df['f1_weighted'] = [
         f1_score(y_true, y_pred, average='weighted', zero_division=0)
     ]
+    score_df.index = [index]
     return score_df
 
 
@@ -88,7 +89,7 @@ def ordinal_encoding(df: pd.DataFrame,
     Ordinal encoding, only implemented to 'fit' column
     """
     mapping = dict()
-    for (index, label) in enumerate(order):
+    for index, label in enumerate(order):
         mapping[label] = index
     df[column].replace(mapping, inplace=True)
     return df

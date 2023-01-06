@@ -66,8 +66,9 @@ def cleanse_before(df: pd.DataFrame, is_train=False):
     """
     This function is called before cleansing each column.
     - Change column order for consistency.
-    - Drop rows corrupted by the byte-order mark '\\udeff'.
     - Replace empty strings with NaN.
+    - Drop rows corrupted by the byte-order mark '\\udeff'.
+    - Replace 'fit' strings with numbers.
     """
     # Drop rows corrupted by the byte-order mark '\\udeff'.
     pos = df['item_name'].str.contains('\ufeff', na=False)
@@ -82,15 +83,25 @@ def cleanse_before(df: pd.DataFrame, is_train=False):
     # Drop rows without 'user_name'
     if is_train:
         df.dropna(subset=['user_name'], inplace=True)
+
+    # Replace 'fit' strings with numbers.
+    if is_train:
+        df['fit'].replace({
+            'Small': '1',
+            'True to Size': '2',
+            'Large': '3'
+        },
+                          inplace=True)
     return df
 
 
 def cleanse_fit(df: pd.DataFrame):
     """
     Cleanse the label 'fit'.
-    - Set value type as category.
+    - Set value type as ordered category.
     """
     df['fit'] = df['fit'].astype('category', copy=False)
+    df['fit'] = df['fit'].cat.set_categories(['1', '2', '3'], ordered=True)
     return df
 
 
@@ -253,7 +264,7 @@ def cleanse_bust_size(df: pd.DataFrame):
     - Set invalid values as NaN.
     - Split 'bust_size' into 2 features:
         - 'bust_size': number part in inches, as float
-        - 'cup_size': letter part, as ordinal category
+        - 'cup_size': letter part, as ordered category
     """
     # Set invalid values as NaN.
     df['bust_size'] = df['bust_size'].astype('string', copy=False)

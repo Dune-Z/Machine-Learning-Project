@@ -5,6 +5,7 @@ import tqdm
 
 from utils import onehot_encoding
 
+
 def softmax(X):
     '''
     Softmax function.
@@ -28,11 +29,13 @@ def log(x):
     else:
         return np.log(x)
 
+
 log = np.vectorize(log)
+
 
 class LogisticClassifier:
     '''
-    Multiclass Logistic Regression using GD with L2 regularization.
+    Multinomial Logistic Regression using GD with L2 regularization.
 
     存在的问题：\n
     1. loss计算十分缓慢 (且存在overflow bug)
@@ -45,7 +48,7 @@ class LogisticClassifier:
                  target_accuracy=0.90,
                  max_iter=10,
                  random_state=0):
-        self.alpha = alpha 
+        self.alpha = alpha
         self.learning_rate = learning_rate
         self.target_accuracy = target_accuracy
         self.max_iter = max_iter
@@ -63,7 +66,7 @@ class LogisticClassifier:
         self.total_iter = 0  # Total number of iterations
         self.total_time = 0  # Total time elapsed
         self.converged = False  # Whether the algorithm converged
-        self.num_classes = None # Number of classes
+        self.num_classes = None  # Number of classes
         self.Y_onehot = None
 
     def fit(self,
@@ -83,7 +86,7 @@ class LogisticClassifier:
         self.d = X.shape[1]
         self.X = np.hstack((np.ones((self.n, 1)), X))
         self.y = y
-        self.Y_onehot = onehot_encoding(self.y, ['fit'])[[0,1,2]].values
+        self.Y_onehot = onehot_encoding(self.y, ['fit'])[[0, 1, 2]].values
         self.num_classes = len(y.unique())
         self.w = w0.copy()
         if self.w is None:
@@ -104,11 +107,11 @@ class LogisticClassifier:
             # Stop timer
             duration = time.time() - start
             self.total_time += duration
-            
+
             # Compute the cross-entropy loss
-        #    loss = self.loss()
-        #    if record_loss:
-        #        self.loss_list.append(self.loss())
+            #    loss = self.loss()
+            #    if record_loss:
+            #        self.loss_list.append(self.loss())
             # Compute the accuracy score
             score = self.score()
             if record_score:
@@ -116,7 +119,7 @@ class LogisticClassifier:
             # Print the progress
             if verbose:
                 print(f'Iteration {self.total_iter:4d}: '
-                    #  f'Loss = {loss:.4f}, '
+                      #  f'Loss = {loss:.4f}, '
                       f'Score = {score:.4f}, '
                       f'Time = {duration:.4f} sec')
             # Stop if the target accuracy is reached
@@ -144,14 +147,16 @@ class LogisticClassifier:
         '''
         Y = self.Y_onehot
         Z = -self.X @ self.w
-        loss = 1/self.n * (np.trace(self.X @ self.w @ Y.T) + np.sum(log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w**2)
+        loss = 1 / self.n * (np.trace(self.X @ self.w @ Y.T) + np.sum(
+            log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w**
+                                                                       2)
         return loss
 
     def gradient(self):
         Z = -self.X @ self.w
         self.prob = softmax(Z)
         Y = self.Y_onehot
-        gd = 1/self.n * (self.X.T @ (Y - self.prob)) + self.alpha * self.w
+        gd = 1 / self.n * (self.X.T @ (Y - self.prob)) + self.alpha * self.w
         return gd
 
     def score(self):
