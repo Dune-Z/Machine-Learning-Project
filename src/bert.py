@@ -140,9 +140,9 @@ def make_dataset(df: pd.DataFrame):
 
 
 def make_label(df: pd.DataFrame):
-    df = df['fit']
+    df = df[['fit']]
     labels = [row.to_list()[0] for _, row in df.iterrows()]
-    labels = [0 if fit.startswith('S') else 1 if fit.startswith('T') else 2 for fit in labels]
+    labels = [1 if fit.startswith('S') else 2 if fit.startswith('T') else 3 for fit in labels]
     return labels
 
 
