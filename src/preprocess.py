@@ -170,8 +170,9 @@ def cleanse_usually_wear(df: pd.DataFrame):
 def cleanse_user_name(df: pd.DataFrame):
     """
     Cleanse the feature 'user_name'.
-    - Set value type as category.
+    - Fill NaN with 'RTR Customer'.
     """
+    df['user_name'].fillna('RTR Customer', inplace=True)
     df['user_name'] = df['user_name'].astype('category', copy=False)
     return df
 
@@ -180,14 +181,15 @@ def cleanse_age(df: pd.DataFrame):
     """
     Cleanse the feature 'age'.
     - Set invalid values as NaN.
-    - Set outliers (>=100) as NaN.
+    - Set outliers (<=5 or >=100) as NaN.
     """
     # Set invalid values as NaN.
     df['age'] = df['age'].astype('string', copy=False)
     pos = df['age'].str.match(r'^\d+$', na=False)
     df.loc[~pos, 'age'] = np.nan
     df['age'] = df['age'].astype(float, copy=False)
-    # Set outliers (>=100) to NaN.
+    # Set outliers (<=5 or >=100) to NaN.
+    df.loc[df['age'] <= 5, 'age'] = np.nan
     df.loc[df['age'] >= 100, 'age'] = np.nan
     return df
 
