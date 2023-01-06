@@ -78,6 +78,10 @@ def cleanse_before(df: pd.DataFrame, is_train=False):
 
     # Replace empty strings with NaN.
     df.replace('', np.nan, inplace=True)
+
+    # Drop rows without 'user_name'
+    if is_train:
+        df.dropna(subset=['user_name'], inplace=True)
     return df
 
 
