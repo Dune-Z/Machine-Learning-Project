@@ -46,3 +46,66 @@ def evaluate_model(y_true, y_pred) -> pd.DataFrame:
         f1_score(y_true, y_pred, average='weighted', zero_division=0)
     ]
     return score_df
+
+
+def onehot_encoding(df:pd.DataFrame, columns:list, change_columns=True):
+    """
+    Onehot encoding using `pd.get_dummies`\n
+    May be used in columns with relative less categories otherwise the dataframe would be sparse
+    """
+    if change_columns:
+        df = pd.get_dummies(data=df, columns=columns)
+    else:
+        # Replacing entries with one-hot vector
+        # columns in dataframe will not be changed
+        # TODO
+        pass
+    return df
+
+
+def label_encoding(df:pd.DataFrame, columns:list):
+    """
+    Converting category into number (str -> float)\n
+    The smaller the frequency is, the larger the encoded number is\n
+    Using `fillna(0)` to convert nan into 0
+    """
+    for column in columns:
+        value_dict = df[column].value_counts().keys()
+        mapping = dict()
+        for (key, value) in enumerate(value_dict):
+            mapping[value] = key + 1
+        mapping
+        df[column].replace(mapping, inplace=True)
+        df[column] = df[column].astype(float, copy=False)
+        df[column].fillna(0, inplace=True)
+    return df
+
+
+def ordinal_encoding(df:pd.DataFrame, column='fit', order=['Small', 'True to Size', 'Large']):
+    """
+    Ordinal encoding, only implemented to 'fit' column
+    """
+    mapping = dict()
+    for (index,label) in enumerate(order):
+        mapping[label] = index
+    df[column].replace(mapping, inplace=True)
+    return df
+
+
+def normalize_column(df:pd.DataFrame, columns:list, method='std', fill_na=0):
+    """
+    Normalize numeric column, providing methods: std (standard) and minmax\n
+    Replacing nan with fill_na, default 0
+    """
+    if method == 'std':
+        for column in columns:
+            df[column].fillna(fill_na, inplace=True)
+            df[column] = (df[column] - df[column].mean()) / df[column].std()
+
+    if method == 'minmax':
+        for column in columns:
+            df[column].fillna(fill_na, inplace=True)
+            df[column] = (df[column] - df[column].min()) / (df[column].max() - df[column].min())
+        
+    return df
+
