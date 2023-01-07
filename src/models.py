@@ -29,7 +29,18 @@ def log(x):
     else:
         return np.log(x)
 
+def sigmoid(x):
+    '''
+    Sigmoid function.
+    '''
+    if x >= 0:
+        z = np.exp(-x)
+        return 1 / (1 + z)
+    else:
+        z = np.exp(x)
+        return z / (1 + z)
 
+sigmoid = np.vectorize(sigmoid)
 log = np.vectorize(log)
 
 
@@ -85,7 +96,7 @@ class LogisticClassifier:
         self.n = X.shape[0]
         self.d = X.shape[1]
         self.X = np.hstack((np.ones((self.n, 1)), X))
-        self.y = y
+        self.y = y.astype(int)
         self.Y_onehot = onehot_encoding(self.y, ['fit'])[[0, 1, 2]].values
         self.num_classes = len(y.unique())
         self.w = w0.copy()
