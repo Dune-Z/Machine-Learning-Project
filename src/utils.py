@@ -75,7 +75,6 @@ def label_encoding(df: pd.DataFrame, columns: list):
         mapping = dict()
         for (key, value) in enumerate(value_dict):
             mapping[value] = key + 1
-        mapping
         df[column].replace(mapping, inplace=True)
         df[column] = df[column].astype(float, copy=False)
         df[column].fillna(0, inplace=True)
@@ -121,3 +120,32 @@ def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
     train_df = df.sample(frac=1 - test_size, random_state=random_state)
     test_df = df.drop(train_df.index)
     return train_df, test_df
+
+
+def random_split(y: np.ndarray, n_split=5):
+    """
+    Split data labeled with 'True to Size' into n_split partition.
+    :Return: [group_1_index, ..., group_n_split_index]
+    """
+    small_large_index = np.where(y == 1 or y == 3)[0]
+    true2size_index = np.where(y == 2)[0]
+    np.random.shuffle(true2size_index)
+    partitions = np.array_split(true2size_index, n_split)
+    partitions = [np.concatenate([part, small_large_index]) for part in partitions]
+    return partitions
+
+
+def random_split_aggr(model,
+                      X_train: np.ndarray, y_train: np.ndarray,
+                      X_test: np.ndarray, y_test: np.ndarray
+                      ):
+    def partial_fit(X_train_: np.ndarray, y_train_: np.ndarray):
+        model.fit(X_train_, y_train_)
+        return model
+
+    partitions = random_split(y_train)
+    models = [partial_fit(X_train[part], y_train[part]) for part in partitions]
+    predictions = [model.predict(X_test) for model in models]
+    predictions = list(map(list, zip(*predictions)))  # list transpose
+    aggregate = [max(set(votes), key=votes.count) for votes in predictions]
+    evaluate_model(y_test, aggregate)
