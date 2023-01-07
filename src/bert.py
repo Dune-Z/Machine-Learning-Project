@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.optim import AdamW
 from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
-from utils import fetch_train_data
+from utils import fetch_train_data, evaluate_model
 
 
 class FitDataset(Dataset):
@@ -34,29 +34,52 @@ class FitModel(nn.Module):
     def __init__(self, device: str, language_model='roberta-base'):
         super(FitModel, self).__init__()
         self.device = device
-        self.model = AutoModel.from_pretrained(language_model)
-        hidden_size = self.model.config.hidden_size
+        self.bert = AutoModel.from_pretrained(language_model)
+        hidden_size = self.bert.config.hidden_size
         self.fc = nn.Linear(hidden_size, 3)
 
     def forward(self, x):
         x = x.to(self.device)
-        encode = self.model(x)[0][:, 0, :]
+        encode = self.bert(x)[0][:, 0, :]
         result = self.fc(encode)
         return result
 
 
+class TuneModel(nn.Module):
+    def __init__(self, device: str, model_path='../data/model.pt'):
+        super(TuneModel, self).__init__()
+        checkpoint = torch.load(model_path)
+        model = FitModel(device=device)
+        model.load_state_dict(checkpoint['model'])
+        self.device = device
+        self.bert = model.bert
+        hidden_size = self.bert.config.hidden_size
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LeakyReLU(),
+            nn.Linear(hidden_size, 2)
+        )
+
+    def forward(self, x):
+        with torch.no_grad():
+            encode = self.bert(x)[0][:, 0, :]
+        return self.fc(encode)
+
+
 def padder(batch):
-    if len(batch) == 3:
-        x1, x2, y = zip(*batch)
-        max_length = max([len(x) for x in x1 + x2])
-        x1 = [xi + [0] * (max_length - len(xi)) for xi in x1]
-        x2 = [xi + [0] * (max_length - len(xi)) for xi in x2]
-        return torch.LongTensor(x1), torch.LongTensor(x2), torch.LongTensor(y)
-    else:
-        x, y = zip(*batch)
-        max_length = max([len(k) for k in x])
-        x = [xi + [0] * (max_length - len(xi)) for xi in x]
-        return torch.LongTensor(x), torch.LongTensor(y)
+    def partial_padding(encode, max_length):
+        return [encode[i] if i < len(encode) else 0 for i in range(max_length)]
+
+    if len(batch) != 2:
+        encodes = batch
+        dim = max([len(encode) for encode in encodes])
+        encodes = [partial_padding(encode, dim) for encode in encodes]
+        return torch.LongTensor(encodes)
+
+    encodes, label = zip(*batch)
+    dim = max([len(encode) for encode in encodes])
+    encodes = [partial_padding(encode, dim) for encode in encodes]
+    return torch.LongTensor(encodes), torch.LongTensor(label)
 
 
 def train_step(train_iter, model, optimizer, scheduler):
@@ -79,17 +102,18 @@ def train_step(train_iter, model, optimizer, scheduler):
 
 
 def evaluate_step(valid_iter, model):
-    total = correct = 0
+    predictions = list()
+    ground_truth = list()
     for batch in valid_iter:
         x, y = batch
         logits = model(x)
-        _, predicted = torch.max(logits.data, dim=1)
-        total += y.size(0)
-        correct += (predicted.to(model.device) == y.to(model.device)).sum().item()
-    print(f'validation accuracy: {(100 * correct / total)}%')
+        _, preds = torch.max(logits.data, dim=1)
+        predictions += preds.to('cpu').tolist() 
+        ground_truth += y.to('cpu').tolist()
+    return evaluate_model(ground_truth, predictions)
 
 
-def train(trainset, validset, batch_size=16, lr=3e-5, n_epochs=10, load=False):
+def train(trainset, validset, batch_size=16, lr=3e-5, n_epochs=10, load=False, tune=False):
     train_iter = DataLoader(dataset=trainset,
                             batch_size=batch_size,
                             shuffle=True,
@@ -102,28 +126,38 @@ def train(trainset, validset, batch_size=16, lr=3e-5, n_epochs=10, load=False):
                             collate_fn=padder)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = FitModel(device=device)
     optimizer = AdamW(model.parameters(), lr=lr)
 
     num_steps = (len(trainset) // batch_size) * n_epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_steps)
+
+    if tune:
+        model = TuneModel(device, model_path)
+    else:
+        model = FitModel(device=device)
+
+    model_path = "../data/model.pt"
+    tuned_model_path = "../data/tuned_model.pt"
     if load:
-        checkpoint = torch.load('../data/model.pt')
+        checkpoint = torch.load(model_path)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
+
     model = model.to(device)
     for epoch in range(n_epochs):
         model.train()
         loss = train_step(train_iter, model, optimizer, scheduler)
         print(f'epoch: {epoch}, loss: {loss}')
         model.eval()
-        evaluate_step(valid_iter, model)
+        print(evaluate_step(valid_iter, model))
         checkpoint = {'model': model.state_dict(), 
               'optimizer': optimizer.state_dict(), 
               'scheduler': scheduler.state_dict(),
               'epoch': epoch}
-        torch.save(checkpoint, '../data/model.pt')
+        if tune:
+            torch.save(checkpoint, tuned_model_path)
+        torch.save(checkpoint, model_path)
     return model
 
 
@@ -156,7 +190,7 @@ def main():
     data = make_dataset(train_df)
     labels = make_label(train_df)
     # train valid split
-    length = len()
+    length = len(labels)
     indexes = random.sample(range(0, length), length)
     train_data = [data[index] for index in indexes[length // 5: ]]
     train_label = [labels[index] for index in indexes[length // 5: ]]
@@ -176,8 +210,8 @@ def main():
         for batch in test_iter:
             logits = model(batch)
             _, batch_preds = torch.max(logits.data, dim=1)
-            predictions.append(batch_preds.to('cpu'))
-    return predictions
+            predictions += batch_preds.to('cpu').tolist()
+    print(predictions)
 
 if __name__ == '__main__':
     main()
