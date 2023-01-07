@@ -17,7 +17,10 @@ class Preprocessor:
         # Do something
         return train_df
 
-    def cleanse(self, df: pd.DataFrame, is_train=False) -> pd.DataFrame:
+    def cleanse(self,
+                df: pd.DataFrame,
+                is_train=False,
+                exclude_cols=[]) -> pd.DataFrame:
         """
         Cleanse the training or testing data.
         """
@@ -28,29 +31,43 @@ class Preprocessor:
 
         df = cleanse_before(df, is_train=is_train)
         # label
-        df = cleanse_fit(df)
+        if 'fit' not in exclude_cols:
+            df = cleanse_fit(df)
         # item attributes
-        df = cleanse_item_name(df)
-        df = cleanse_size(df)
-        df = cleanse_price(df)
+        if 'item_name' not in exclude_cols:
+            df = cleanse_item_name(df)
+        if 'size' not in exclude_cols:
+            df = cleanse_size(df)
+        if 'price' not in exclude_cols:
+            df = cleanse_price(df)
         # transaction info
-        df = cleanse_rented_for(df)
-        df = cleanse_usually_wear(df)
+        if 'rented_for' not in exclude_cols:
+            df = cleanse_rented_for(df)
+        if 'usually_wear' not in exclude_cols:
+            df = cleanse_usually_wear(df)
         # user attributes
-        if is_train:
+        if is_train and 'body_type' not in exclude_cols:
             df = cleanse_user_name(df)
-        df = cleanse_age(df)
-        df = cleanse_height(df)
-        df = cleanse_weight(df)
-        df = cleanse_body_type(df)
-        df = cleanse_bust_size(df)
-        # feedback
+        if 'age' not in exclude_cols:
+            df = cleanse_age(df)
+        if 'height' not in exclude_cols:
+            df = cleanse_height(df)
+        if 'weight' not in exclude_cols:
+            df = cleanse_weight(df)
+        if 'body_type' not in exclude_cols:
+            df = cleanse_body_type(df)
+        if 'bust_size' not in exclude_cols:
+            df = cleanse_bust_size(df)
+        # feedback info
         if is_train:
-            df = cleanse_review_summary(df)
-            df = cleanse_review(df)
-            df = cleanse_rating(df)
-
-        df = cleanse_after(df, is_train=is_train)
+            if 'review_summary' not in exclude_cols:
+                df = cleanse_review_summary(df)
+            if 'review' not in exclude_cols:
+                df = cleanse_review(df)
+            if 'rating' not in exclude_cols:
+                df = cleanse_rating(df)
+        if not exclude_cols:
+            df = cleanse_after(df, is_train=is_train)
         return df
 
     def transform(self, test_df: pd.DataFrame) -> pd.DataFrame:
@@ -116,7 +133,7 @@ def cleanse_item_name(df: pd.DataFrame):
     new_cols = df['item_name'].str.split('\n', expand=True)
     df['brand'] = new_cols[0]
     df['item_name'] = new_cols[0] + '_' + new_cols[1]
-    # Set 'brand' as NaN for items without brand
+    # Set 'brand' as NaN for items without brand.
     pos = df['brand'].str.endswith('"', na=False)
     df.loc[pos, 'item_name'] = df.loc[pos, 'brand'].str.removesuffix('"')
     df.loc[pos, 'brand'] = np.nan
@@ -131,13 +148,82 @@ def cleanse_item_name(df: pd.DataFrame):
 
 def cleanse_size(df: pd.DataFrame):
     """
-    Cleanse the feature 'size'.
-    - Set 'None', 'NONE', '-1' as NaN
+    Cleanse the feature 'size'. \n
+    ! This function should be called after 'item_name' is cleansed.
+    - Set 'None', 'NONE', '-1' as NaN.
+    - Get 'size_scheme', 'size_main' and 'size_suffix' of each transaction.
+    - Fix 'size_scheme' for each item.
     """
+    # Set 'None', 'NONE', '-1' as NaN.
     df['size'] = df['size'].astype('string', copy=False)
     pos = df['size'].str.match(r'^None|NONE|-1$', na=False)
     df.loc[pos, 'size'] = np.nan
     df['size'] = df['size'].astype('category', copy=False)
+
+    # Get 'size_scheme', 'size_main' and 'size_suffix' of each transaction.
+    size_strings = pd.DataFrame()
+    size_strings[['item_name', 'size']] = df[['item_name', 'size']].astype(str)
+    size_strings['size_scheme'] = np.nan
+
+    # - Case 1: size in letter
+    size_strings = size_strings.join(size_strings['size'].str.extract(
+        r'^(XXS|\d*XS|S|M|L|\d*XL|XXL|\d*X)([PRL])?$'))
+    size_strings.loc[size_strings[0].notna(), 'size_scheme'] = 'letter'
+
+    # - Case 2: size in number
+    temp = size_strings['size'].str.extract(r'^(\d+)(W|W?[PRL])?$')
+    pos = temp[0].notna()
+    size_strings.loc[pos, [0, 1]] = temp.loc[pos, :]
+    size_strings.loc[pos, 'size_scheme'] = 'number'
+
+    # - Case 3: size between 2 letter
+    temp = size_strings['size'].str.extract(
+        r'^((?:XXS|XS|P|S|M|L|XL|XXL|X)(?:-|\/)(?:XXS|XS|P|S|M|L|XL|XXL|X))([PRL])?$'
+    )
+    temp[0] = temp[0].str.replace(r'\/', '-', regex=True)
+    pos = temp[0].notna()
+    size_strings.loc[pos, [0, 1]] = temp.loc[pos, :]
+    size_strings.loc[pos, 'size_scheme'] = 'letter'
+
+    # - Case 4: size between 2 number
+    temp = size_strings['size'].str.extract(
+        r'^((?:\d+)(?:-|\/)(?:\d+))([PRL])?$')
+    temp[0] = temp[0].str.replace(r'\/', '-', regex=True)
+    pos = temp[0].notna()
+    size_strings.loc[pos, [0, 1]] = temp.loc[pos, :]
+    size_strings.loc[pos, 'size_scheme'] = 'number'
+
+    size_strings.loc[size_strings['size'] == 'ONESIZE',
+                     'size_scheme'] = 'onesize'
+    size_strings['size'].replace({'ONESIZE': 'unknown'}, inplace=True)
+    size_strings['size'].fillna('unknown', inplace=True)
+
+    # Fix 'size_scheme' for each item.
+    item_indices = df.groupby(['item_name']).indices
+    item_size_schemes = size_strings.groupby(['item_name'
+                                              ])['size_scheme'].unique()
+    for name, schemes in item_size_schemes.items():
+        if len(schemes) == 1:
+            pass
+        elif 'onesize' in schemes:
+            size_strings.iloc[item_indices[name], 1] = 'unknown'
+            size_strings.iloc[item_indices[name], 2] = 'onesize'
+            size_strings.iloc[item_indices[name], 3] = np.nan
+        elif 'letter' in schemes and 'number' in schemes:
+            size_strings.iloc[item_indices[name], 2] = 'mixed'
+        elif 'number' in schemes:
+            size_strings.iloc[item_indices[name], 2] = 'number'
+        elif 'letter' in schemes:
+            size_strings.iloc[item_indices[name], 2] = 'letter'
+
+    size_strings.rename(columns={
+        0: 'size_main',
+        1: 'size_suffix'
+    },
+                        inplace=True)
+
+    df = df.join(size_strings[['size_main', 'size_suffix', 'size_scheme']])
+
     return df
 
 
@@ -322,17 +408,18 @@ def cleanse_after(df: pd.DataFrame, is_train=False):
     """
     if is_train:
         df = df.reindex(columns=[
-            'fit', 'item_name', 'brand', 'category', 'size', 'price',
-            'user_name', 'rented_for', 'usually_wear', 'age', 'height',
-            'weight', 'body_type', 'bust_size', 'cup_size', 'review_summary',
-            'review', 'rating'
+            'fit', 'item_name', 'brand', 'category', 'size', 'size_main',
+            'size_suffix', 'size_scheme', 'price', 'user_name', 'rented_for',
+            'usually_wear', 'age', 'height', 'weight', 'body_type',
+            'bust_size', 'cup_size', 'review_summary', 'review', 'rating'
         ],
                         copy=False)
     else:
         df = df.reindex(columns=[
-            'fit', 'item_name', 'brand', 'category', 'size', 'price',
-            'rented_for', 'usually_wear', 'age', 'height', 'weight',
-            'body_type', 'bust_size', 'cup_size'
+            'fit', 'item_name', 'brand', 'category', 'size', 'size_main',
+            'size_suffix', 'size_scheme', 'price', 'rented_for',
+            'usually_wear', 'age', 'height', 'weight', 'body_type',
+            'bust_size', 'cup_size'
         ],
                         copy=False)
     return df
