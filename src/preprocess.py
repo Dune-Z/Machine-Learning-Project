@@ -115,7 +115,7 @@ def cleanse_item_name(df: pd.DataFrame):
     # Split strings by '\n'.
     new_cols = df['item_name'].str.split('\n', expand=True)
     df['brand'] = new_cols[0]
-    df['item_name'] = new_cols[1]
+    df['item_name'] = new_cols[0] + '_' + new_cols[1]
     # Set 'brand' as NaN for items without brand
     pos = df['brand'].str.endswith('"', na=False)
     df.loc[pos, 'item_name'] = df.loc[pos, 'brand'].str.removesuffix('"')
@@ -322,7 +322,7 @@ def cleanse_after(df: pd.DataFrame, is_train=False):
     """
     if is_train:
         df = df.reindex(columns=[
-            'fit', 'brand', 'item_name', 'category', 'size', 'price',
+            'fit', 'item_name', 'brand', 'category', 'size', 'price',
             'user_name', 'rented_for', 'usually_wear', 'age', 'height',
             'weight', 'body_type', 'bust_size', 'cup_size', 'review_summary',
             'review', 'rating'
@@ -330,7 +330,7 @@ def cleanse_after(df: pd.DataFrame, is_train=False):
                         copy=False)
     else:
         df = df.reindex(columns=[
-            'fit', 'brand', 'item_name', 'category', 'size', 'price',
+            'fit', 'item_name', 'brand', 'category', 'size', 'price',
             'rented_for', 'usually_wear', 'age', 'height', 'weight',
             'body_type', 'bust_size', 'cup_size'
         ],
