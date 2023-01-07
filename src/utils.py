@@ -49,70 +49,6 @@ def evaluate_model(y_true, y_pred, index='result') -> pd.DataFrame:
     return score_df
 
 
-def onehot_encoding(df: pd.DataFrame, columns: list, change_columns=True):
-    """
-    Onehot encoding using `pd.get_dummies`\n
-    May be used in columns with relative less categories otherwise the dataframe would be sparse
-    """
-    if change_columns:
-        df = pd.get_dummies(data=df, columns=columns)
-    else:
-        # Replacing entries with one-hot vector
-        # columns in dataframe will not be changed
-        # TODO
-        pass
-    return df
-
-
-def label_encoding(df: pd.DataFrame, columns: list):
-    """
-    Converting category into number (str -> float)\n
-    The smaller the frequency is, the larger the encoded number is\n
-    Using `fillna(0)` to convert nan into 0
-    """
-    for column in columns:
-        value_dict = df[column].value_counts().keys()
-        mapping = dict()
-        for (key, value) in enumerate(value_dict):
-            mapping[value] = key + 1
-        df[column].replace(mapping, inplace=True)
-        df[column] = df[column].astype(float, copy=False)
-        df[column].fillna(0, inplace=True)
-    return df
-
-
-def ordinal_encoding(df: pd.DataFrame,
-                     column='fit',
-                     order=['Small', 'True to Size', 'Large']):
-    """
-    Ordinal encoding, only implemented to 'fit' column
-    """
-    mapping = dict()
-    for index, label in enumerate(order):
-        mapping[label] = index
-    df[column].replace(mapping, inplace=True)
-    return df
-
-
-def normalize_column(df: pd.DataFrame, columns: list, method='std', fill_na=0):
-    """
-    Normalize numeric column, providing methods: std (standard) and minmax\n
-    Replacing nan with fill_na, default 0
-    """
-    if method == 'std':
-        for column in columns:
-            df[column].fillna(fill_na, inplace=True)
-            df[column] = (df[column] - df[column].mean()) / df[column].std()
-
-    if method == 'minmax':
-        for column in columns:
-            df[column].fillna(fill_na, inplace=True)
-            df[column] = (df[column] - df[column].min()) / (df[column].max() -
-                                                            df[column].min())
-
-    return df
-
-
 def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
     """
     Split dataframe into train and test set
@@ -131,20 +67,20 @@ def random_split(y: np.ndarray, n_split=5):
     true2size_index = np.where(y == 2)[0]
     np.random.shuffle(true2size_index)
     partitions = np.array_split(true2size_index, n_split)
-    partitions = [np.concatenate([part, small_large_index]) for part in partitions]
+    partitions = [
+        np.concatenate([part, small_large_index]) for part in partitions
+    ]
     return partitions
 
 
-def random_split_aggr(model,
-                      X_train: np.ndarray, y_train: np.ndarray,
-                      X_test: np.ndarray, y_test: np.ndarray,
-                      fit_args: dict
-                      ):
+def random_split_aggr(model, X_train: np.ndarray, y_train: np.ndarray,
+                      X_test: np.ndarray, y_test: np.ndarray, fit_args: dict):
     """
     Apply random split to deal with imbalanced data.
     Require model to have method: fit(X_train, y_train) and predict(X_test)
     Other args are required to be in form of dictionary.
     """
+
     def partial_fit(X_train_: np.ndarray, y_train_: np.ndarray):
         model.fit(X_train_, y_train_, **fit_args)
         return model
