@@ -7,9 +7,9 @@ from utils import onehot_encoding
 
 
 def softmax(X):
-    '''
+    """
     Softmax function.
-    '''
+    """
     X_max = np.max(X, axis=1)
     # Broadcast manually
     X_max = np.stack((X_max, X_max, X_max)).T
@@ -21,9 +21,9 @@ def softmax(X):
 
 
 def log(x):
-    '''
+    """
     Log function.
-    '''
+    """
     if x == 0:
         return -1e10
     else:
@@ -34,13 +34,13 @@ log = np.vectorize(log)
 
 
 class LogisticClassifier:
-    '''
+    """
     Multinomial Logistic Regression using GD with L2 regularization.
 
     存在的问题：\n
     1. loss计算十分缓慢 (且存在overflow bug)
     2. 模型训练时score波动较大
-    '''
+    """
 
     def __init__(self,
                  alpha=0.01,
@@ -76,9 +76,9 @@ class LogisticClassifier:
             verbose=False,
             record_loss=False,
             record_score=True):
-        '''
+        """
         Train the classifier.
-        '''
+        """
         # Set the random seed
         np.random.seed(self.random_state)
         # Initialize the parameters
@@ -128,28 +128,27 @@ class LogisticClassifier:
                 break
 
     def predict(self, X):
-        '''
+        """
         Predict the labels.
-        '''
+        """
         prob = self.predict_proba(X)
         return np.argmax(prob, axis=1).astype(int)
 
     def predict_proba(self, X):
-        '''
+        """
         Predict the probabilities of the positive class.
-        '''
+        """
         X = np.hstack((np.ones((X.shape[0], 1)), X))
         return softmax(-X @ self.w)
 
     def loss(self):
-        '''
+        """
         Evaluate the cross-entropy loss on the training set.
-        '''
+        """
         Y = self.Y_onehot
         Z = -self.X @ self.w
         loss = 1 / self.n * (np.trace(self.X @ self.w @ Y.T) + np.sum(
-            log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w**
-                                                                       2)
+            log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w ** 2)
         return loss
 
     def gradient(self):
@@ -160,23 +159,23 @@ class LogisticClassifier:
         return gd
 
     def score(self):
-        '''
+        """
         Evaluate the accuracy on the training set.
-        '''
+        """
         return np.mean(np.argmax(self.prob, axis=1).astype(int) == self.y)
 
     def plot_loss(self, ax=None, **kwargs):
-        '''
+        """
         Plot the loss function.
-        '''
+        """
         if ax is None:
             ax = plt.gca()
         ax.plot(self.loss_list, **kwargs)
 
     def plot_score(self, ax=None, **kwargs):
-        '''
+        """
         Plot the accuracy score.
-        '''
+        """
         if ax is None:
             ax = plt.gca()
         ax.plot(self.score_list, **kwargs)
