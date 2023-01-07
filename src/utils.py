@@ -137,10 +137,16 @@ def random_split(y: np.ndarray, n_split=5):
 
 def random_split_aggr(model,
                       X_train: np.ndarray, y_train: np.ndarray,
-                      X_test: np.ndarray, y_test: np.ndarray
+                      X_test: np.ndarray, y_test: np.ndarray,
+                      fit_args: dict
                       ):
+    """
+    Apply random split to deal with imbalanced data.
+    Require model to have method: fit(X_train, y_train) and predict(X_test)
+    Other args are required to be in form of dictionary.
+    """
     def partial_fit(X_train_: np.ndarray, y_train_: np.ndarray):
-        model.fit(X_train_, y_train_)
+        model.fit(X_train_, y_train_, **fit_args)
         return model
 
     partitions = random_split(y_train)
