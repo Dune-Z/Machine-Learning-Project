@@ -5,6 +5,22 @@ import tqdm
 import pandas as pd
 
 
+class RandomClassifier:
+    """
+    Generate a random number between 0 and 2 for prediction.
+    For testing purpose.
+    """
+
+    def __init__(self):
+        pass
+
+    def fit(self, X, y):
+        pass
+
+    def predict(self, X):
+        return np.random.randint(0, 3, size=X.shape[0])
+
+
 def softmax(X):
     """
     Softmax function.

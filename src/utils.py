@@ -30,7 +30,9 @@ def describe_data(df: pd.DataFrame) -> pd.DataFrame:
     return desc_df
 
 
-def evaluate_model(y_true, y_pred, index='result') -> pd.DataFrame:
+def evaluate_model(y_true: np.ndarray,
+                   y_pred: np.ndarray,
+                   index='result') -> pd.DataFrame:
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
     score_df = pd.DataFrame()
     score_df['accuracy'] = [accuracy_score(y_true, y_pred)]
@@ -46,9 +48,9 @@ def evaluate_model(y_true, y_pred, index='result') -> pd.DataFrame:
     score_df['f1_weighted'] = [
         f1_score(y_true, y_pred, average='weighted', zero_division=0)
     ]
-    score_df['#small'] = [(y_pred == 0).sum().item()]
-    score_df['#true2size'] = [(y_pred == 1).sum().item()]
-    score_df['#large'] = [(y_pred == 2).sum().item()]
+    score_df['#small'] = [np.sum(y_pred == 0).item()]
+    score_df['#true2size'] = [np.sum(y_pred == 1).item()]
+    score_df['#large'] = [np.sum(y_pred == 2).item()]
     score_df.index = [index]
     return score_df
 
@@ -60,13 +62,15 @@ def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
     train_df = df.sample(frac=1 - test_size, random_state=random_state)
     test_df = df.drop(train_df.index)
     test_df['fit'].replace({
-        'Small': '1',
-        'True to Size': '2',
-        'Large': '3'
+        'Small': 1,
+        'True to Size': 2,
+        'Large': 3
     },
                            inplace=True)
     train_df.reset_index(drop=True, inplace=True)
     test_df.reset_index(drop=True, inplace=True)
+    pos = test_df['item_name'].str.contains('\ufeff', na=False)
+    test_df.loc[pos, 'fit'] = 2
     return train_df, test_df
 
 
@@ -75,7 +79,8 @@ def random_split(y: np.ndarray, n_split=5):
     Split data labeled with 'True to Size' into n_split partition.
     :Return: [group_1_index, ..., group_n_split_index]
     """
-    small_large_index = np.concatenate([np.where(y == 0)[0], np.where(y == 2)[0]])
+    small_large_index = np.concatenate(
+        [np.where(y == 0)[0], np.where(y == 2)[0]])
     true2size_index = np.where(y == 1)[0]
     np.random.shuffle(true2size_index)
     partitions = np.array_split(true2size_index, n_split)
@@ -85,8 +90,12 @@ def random_split(y: np.ndarray, n_split=5):
     return partitions
 
 
-def random_split_aggr(model, X_train: np.ndarray, y_train: np.ndarray,
-                      X_test: np.ndarray, y_test: np.ndarray, fit_args: dict):
+def random_split_aggr(model,
+                      X_train: np.ndarray,
+                      y_train: np.ndarray,
+                      X_test: np.ndarray,
+                      y_test: np.ndarray,
+                      fit_args: dict = {}):
     """
     Apply random split to deal with imbalanced data.
     Require model to have method: fit(X_train, y_train) and predict(X_test)
@@ -97,11 +106,11 @@ def random_split_aggr(model, X_train: np.ndarray, y_train: np.ndarray,
         print(np.unique(y_train[partition], return_counts=True))
         new_model = deepcopy(model)
         new_model.fit(X_train[partition], y_train[partition], **fit_args)
-        return new_model 
+        return new_model
 
     partitions = random_split(y_train)
     models = [partial_fit(part) for part in partitions]
     predictions = [model.predict(X_test) for model in models]
     predictions = list(map(list, zip(*predictions)))  # list transpose
-    aggregate = [max(set(votes), key=votes.count) for votes in predictions]
+    aggregate = np.array([max(set(votes), key=votes.count) for votes in predictions])
     return evaluate_model(y_test, aggregate)

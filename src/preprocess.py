@@ -105,7 +105,8 @@ class Preprocessor:
         if is_train:
             df.drop(df[pos].index, inplace=True)
         else:
-            df.loc[pos, :] = np.nan
+            cols = df.columns.tolist().remove('fit')
+            df.loc[pos, cols] = np.nan
 
         # Replace empty strings with NaN.
         df.replace('', np.nan, inplace=True)
@@ -117,9 +118,9 @@ class Preprocessor:
         # Replace 'fit' strings with numbers.
         if is_train:
             df['fit'].replace({
-                'Small': '1',
-                'True to Size': '2',
-                'Large': '3'
+                'Small': 1,
+                'True to Size': 2,
+                'Large': 3
             },
                               inplace=True)
         return df
@@ -131,7 +132,7 @@ class Preprocessor:
         - Set value type as ordered category.
         """
         df['fit'] = df['fit'].astype('category', copy=False)
-        df['fit'] = df['fit'].cat.set_categories(['1', '2', '3'], ordered=True)
+        df['fit'] = df['fit'].cat.set_categories([1, 2, 3], ordered=True)
         return df
 
     @staticmethod
