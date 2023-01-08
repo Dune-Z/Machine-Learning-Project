@@ -9,15 +9,23 @@ class Preprocessor:
         self.train_df = None
         self.test_df = None
         self.pipeline = pipeline
-        pass
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit all transformers and transform the training data.
         """
         self.train_df = df
-        for transformer in self.pipeline:
-            df = transformer.fit_transform(df)
+        for i, dt in enumerate(self.pipeline):
+            print(type(dt))
+            if dt.cols is not None:
+                df = dt.fit_transform(df)
+                continue
+            # SelectOutputColumns
+            for target_dt in self.pipeline:
+                if dt.target == target_dt.name:
+                    self.pipeline[i + 1].cols += (target_dt.out_cols)
+                    break
+
         return df
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -25,8 +33,9 @@ class Preprocessor:
         Transform the test data.
         """
         self.test_df = df
-        for transformer in self.pipeline:
-            df = transformer.transform(df)
+        for dt in self.pipeline:
+            if dt.cols is not None:
+                df = dt.transform(df)
         return df
 
     def cleanse(self,
@@ -411,23 +420,35 @@ class Preprocessor:
         return df
 
 
-class OrdinalEncoder:
+class DataTransformer:
+    """
+    The base class for data transformers.
+    """
+
+    def __init__(self, cols=[], name=''):
+        self.name = name
+        self.cols = cols
+        self.out_cols = []  # output columns
+
+
+class OrdinalEncoder(DataTransformer):
     """
     Encode ordered categorical features as integers in the same columns.
     If column is pd.Categorical with order, then its codes are returned.\n
     Otherwise, order can be passed as a dict of column name and category list.\n
     If neither, then categories are sorted by frequency in ascending order.\n
-    NaN is encoded as -1.
+    NaN is encoded as np.nan.
     """
 
-    def __init__(self, cols: list = [], order: dict = {}):
-        self.cols = cols
+    def __init__(self, cols=[], order={}, name=''):
+        super().__init__(cols, name)
         self.order = order
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit to the training data and return the encoded data
         """
+        self.out_cols = self.cols
         for col in self.cols:
             df[col] = df[col].astype('category', copy=False)
             if not df[col].cat.ordered:
@@ -439,6 +460,7 @@ class OrdinalEncoder:
                         df[col].value_counts().keys(), ordered=True)
             self.order[col] = df[col].cat.categories.tolist()
             df[col] = df[col].cat.codes
+            df[col].replace(-1, np.nan, inplace=True)
         return df
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -449,18 +471,19 @@ class OrdinalEncoder:
             df[col] = df[col].astype('category', copy=False)
             df[col] = df[col].cat.set_categories(self.order[col], ordered=True)
             df[col] = df[col].cat.codes
+            df[col].replace(-1, np.nan, inplace=True)
         return df
 
 
-class OneHotEncoder:
+class OneHotEncoder(DataTransformer):
     """
     Encode categorical features as a one-hot vector, with each category as a new column.\n
-    NaN and unseen categories are encoded as np.nan in each column.\n
+    NaN and unseen categories are encoded as zeros in each column.\n
     This encoder is extremely slow for high cardinality features (since I use for loop). Do not use it in such cases.
     """
 
-    def __init__(self, cols: list = [], max_categories=500):
-        self.cols = cols
+    def __init__(self, cols=[], max_categories=500, name=''):
+        super().__init__(cols, name)
         self.max_categories = max_categories
         self.categories = {}
 
@@ -468,47 +491,46 @@ class OneHotEncoder:
         """
         Fit to the training data and return the encoded data
         """
+        dummies = pd.get_dummies(df[self.cols])
+        self.out_cols = dummies.columns.tolist()
         for col in self.cols:
-            self.categories[col] = df[col].unique().tolist()
+            self.categories[col] = df[col].dropna().unique().tolist()
             if len(self.categories[col]) > self.max_categories:
                 warnings.warn(
                     f"Column {col} has {len(self.categories[col])} categories, which is more than the maximum of {self.max_categories}. Please consider using other encoders."
                 )
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                for category in self.categories[col]:
-                    df[col + '_' +
-                       str(category)] = (df[col] == category).astype(int)
-            df.drop(col, axis=1, inplace=True)
-            pd.get_dummies
+        df = df.join(dummies)
+        df.drop(self.cols, axis=1, inplace=True)
         return df
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Return the encoded test data
         """
-        for col in self.cols:
-            for category in self.categories[col]:
-                df[col + '_' +
-                   str(category)] = (df[col] == category).astype(int)
-            df.drop(col, axis=1, inplace=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for col in self.cols:
+                for category in self.categories[col]:
+                    df[f'{col}_{category}'] = (df[col] == category).astype(int)
+        df.drop(self.cols, axis=1, inplace=True)
         return df
 
 
-class StandardScaler:
+class StandardScaler(DataTransformer):
     """
     Standardize features by removing the mean and scaling to unit variance.
     """
 
-    def __init__(self, cols: list = []):
-        self.cols = cols
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
         self.mean = {}
         self.std = {}
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Fit to the training data and return the encoded data
+        Fit to the training data and return the scaled data
         """
+        self.out_cols = self.cols
         for col in self.cols:
             self.mean[col] = df[col].mean()
             self.std[col] = df[col].std()
@@ -517,27 +539,28 @@ class StandardScaler:
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Return the encoded test data
+        Return the scaled test data
         """
         for col in self.cols:
             df[col] = (df[col] - self.mean[col]) / self.std[col]
         return df
 
 
-class MinMaxScaler:
+class MinMaxScaler(DataTransformer):
     """
     Standardize features by removing the mean and scaling to [0, 1].
     """
 
-    def __init__(self, cols: list = []):
-        self.cols = cols
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
         self.min = {}
         self.max = {}
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Fit to the training data and return the encoded data
+        Fit to the training data and return the scaled data
         """
+        self.out_cols = self.cols
         for col in self.cols:
             self.min[col] = df[col].min()
             self.max[col] = df[col].max()
@@ -547,9 +570,149 @@ class MinMaxScaler:
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Return the encoded test data
+        Return the scaled test data
         """
         for col in self.cols:
             df[col] = (df[col] - self.min[col]) / (self.max[col] -
                                                    self.min[col])
         return df
+
+
+class MeanImputer(DataTransformer):
+    """
+    Impute missing values with the mean along each column.
+    """
+
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
+        self.mean = {}
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the imputed data
+        """
+        self.out_cols = self.cols
+        for col in self.cols:
+            self.mean[col] = df[col].mean()
+            df[col].fillna(self.mean[col], inplace=True)
+        return df
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the imputed test data
+        """
+        for col in self.cols:
+            df[col].fillna(self.mean[col], inplace=True)
+        return df
+
+
+class MedianImputer(DataTransformer):
+    """
+    Impute missing values with the median along each column.
+    """
+
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
+        self.median = {}
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the imputed data
+        """
+        self.out_cols = self.cols
+        for col in self.cols:
+            self.median[col] = df[col].median()
+            df[col].fillna(self.median[col], inplace=True)
+        return df
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the imputed test data
+        """
+        for col in self.cols:
+            df[col].fillna(self.median[col], inplace=True)
+        return df
+
+
+class ModeImputer(DataTransformer):
+    """
+    Impute missing values with the mode along each column.
+    """
+
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
+        self.mode = {}
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the imputed data
+        """
+        self.out_cols = self.cols
+        for col in self.cols:
+            self.mode[col] = df[col].mode()[0]
+            df[col].fillna(self.mode[col], inplace=True)
+        return df
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the imputed test data
+        """
+        for col in self.cols:
+            df[col].fillna(self.mode[col], inplace=True)
+        return df
+
+
+class ConstantImputer(DataTransformer):
+    """
+    Impute missing values with a constant value.
+    """
+
+    def __init__(self, cols=[], value=0, name=''):
+        super().__init__(cols, name)
+        self.value = value
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the imputed data
+        """
+        self.out_cols = self.cols
+        for col in self.cols:
+            df[col].fillna(self.value, inplace=True)
+        return df
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the imputed test data
+        """
+        for col in self.cols:
+            df[col].fillna(self.value, inplace=True)
+        return df
+
+
+class DropColumns(DataTransformer):
+    """
+    Drop columns from a dataframe.
+    """
+
+    def __init__(self, cols=[], name=''):
+        super().__init__(cols, name)
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        return self.transform(df)
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        for col in self.cols:
+            if col in df.columns:
+                df.drop(col, axis=1, inplace=True)
+        return df
+
+
+class SelectOutputColumns:
+    """
+    Select the output columns of a named DataTransformer.\n
+    The main logic is implemented in the Preprocessor class as I have not found a better way to do this.
+    """
+
+    def __init__(self, target: str):
+        self.cols = None
+        self.target = target
