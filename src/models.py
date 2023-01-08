@@ -28,6 +28,7 @@ def log(x):
     else:
         return np.log(x)
 
+
 def sigmoid(x):
     '''
     Sigmoid function.
@@ -38,6 +39,7 @@ def sigmoid(x):
     else:
         z = np.exp(x)
         return z / (1 + z)
+
 
 sigmoid = np.vectorize(sigmoid)
 log = np.vectorize(log)
@@ -158,7 +160,8 @@ class LogisticClassifier:
         Y = self.Y_onehot
         Z = -self.X @ self.w
         loss = 1 / self.n * (np.trace(self.X @ self.w @ Y.T) + np.sum(
-            log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w ** 2)
+            log(np.sum(np.exp(Z), axis=1)))) + self.alpha / 2 * np.sum(self.w**
+                                                                       2)
         return loss
 
     def gradient(self):
@@ -174,29 +177,7 @@ class LogisticClassifier:
         """
         return np.mean(np.argmax(self.prob, axis=1).astype(int) == self.y)
 
-    def plot_loss(self, ax=None, **kwargs):
-        """
-        Plot the loss function.
-        """
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.loss_list, **kwargs)
 
-    def plot_score(self, ax=None, **kwargs):
-        """
-        Plot the accuracy score.
-        """
-        if ax is None:
-            ax = plt.gca()
-        ax.plot(self.score_list, **kwargs)
-
-    def plot(self, ax=None, **kwargs):
-        if ax is None:
-            _, ax = plt.subplots(1, 2, figsize=(12, 4))
-        self.plot_loss(ax[0], **kwargs)
-        self.plot_score(ax[1], **kwargs)
-        
-       
 class BinaryClassifier:
     '''
     Binomial Logistic Regression using GD, SGD, or mini-batch SGD with L2 regularization.
@@ -231,8 +212,8 @@ class BinaryClassifier:
         self.converged = False  # Whether the algorithm converged
 
     def fit(self,
-            X,
-            y,
+            X: np.ndarray,
+            y: np.ndarray,
             w0=None,
             verbose=False,
             record_loss=False,
@@ -329,13 +310,15 @@ class BinaryClassifier:
         Evaluate the accuracy on the training set.
         '''
         return np.mean((self.prob >= 0.5).astype(int) == self.y)
-    
-    
+
+
 class OrdinalClassifier:
     """
     Ordinal Classifier
     Using two Logistic Regression classifier to predict P(Target > Small) and P(Target > True to Size)
+    Target should be encoded as 0, 1, 2
     """
+
     def __init__(self,
                  alpha=0.01,
                  learning_rate=1e-5,
@@ -348,17 +331,15 @@ class OrdinalClassifier:
         self.max_iter = max_iter
         self.random_state = random_state
 
-        self.clf_low = BinaryClassifier(max_iter=self.max_iter, alpha=self.alpha)
-        self.clf_high = BinaryClassifier(max_iter=self.max_iter, alpha=self.alpha)
+        self.clf_low = BinaryClassifier(max_iter=self.max_iter,
+                                        alpha=self.alpha)
+        self.clf_high = BinaryClassifier(max_iter=self.max_iter,
+                                         alpha=self.alpha)
 
-    def fit(self,
-            X,
-            y,
-            w0_high=None,
-            w0_low=None):
+    def fit(self, X: np.ndarray, y: np.ndarray, w0_high=None, w0_low=None):
 
-        y_low = y.replace({1:0, 2:1, 3:1})
-        y_high = y.replace({1:0, 2:0, 3:1})
+        y_low = (y == 0).astype(int)
+        y_high = (y == 2).astype(int)
 
         if w0_high == None:
             w0_high = np.random.randn(X.shape[1] + 1)
@@ -369,11 +350,11 @@ class OrdinalClassifier:
         self.clf_high.fit(X, y_high, w0=w0_high)
 
     def predict_proba(self, X):
-        prob_1 = 1 - self.clf_low.predict_proba(X)
-        prob_2 = self.clf_low.predict_proba(X) - self.clf_high.predict_proba(X)
-        prob_3 = self.clf_high.predict_proba(X)
+        prob_0 = 1 - self.clf_low.predict_proba(X)
+        prob_1 = self.clf_low.predict_proba(X) - self.clf_high.predict_proba(X)
+        prob_2 = self.clf_high.predict_proba(X)
 
-        prob = np.stack([prob_1, prob_2, prob_3]).T
+        prob = np.stack([prob_0, prob_1, prob_2]).T
         return prob
 
     def predict(self, X):
