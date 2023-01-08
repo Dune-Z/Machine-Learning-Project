@@ -514,7 +514,37 @@ class OneHotEncoder(DataTransformer):
                     df[f'{col}_{category}'] = (df[col] == category).astype(int)
         df.drop(self.cols, axis=1, inplace=True)
         return df
-
+    
+    
+class TargetEncoder:
+    """
+    Replacing categories by the mean value of target of category variables\n
+    Target should be numeric 
+    """
+    def __init__(self, cols: list = [], target: str = 'weight'):
+        self.cols = cols
+        self.target = target
+        self.mapping = {}
+        
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the encoded data
+        """
+        for cols in self.cols:
+            mapping = df.groupby(cols).mean(numeric_only=True)[self.target].to_dict()
+            self.mapping[cols] = mapping
+            df[cols].replace(mapping, inplace=True)
+        return df
+    
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the encoded test data
+        """
+        for cols in self.cols:
+            mapping = self.mapping[cols]
+            df[cols] = df[cols].map(mapping) 
+        return df
+            
 
 class StandardScaler(DataTransformer):
     """
