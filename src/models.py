@@ -2,8 +2,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import tqdm
-
-from utils import onehot_encoding
+import pandas as pd
 
 
 def softmax(X):
@@ -97,7 +96,7 @@ class LogisticClassifier:
         self.d = X.shape[1]
         self.X = np.hstack((np.ones((self.n, 1)), X))
         self.y = y.astype(int)
-        self.Y_onehot = onehot_encoding(self.y, ['fit'])[[0, 1, 2]].values
+        self.Y_onehot = pd.get_dummies(y)[[1, 2, 3]].values
         self.num_classes = len(y.unique())
         self.w = w0.copy()
         if self.w is None:
