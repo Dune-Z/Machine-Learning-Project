@@ -58,7 +58,7 @@ class LogisticClassifier:
                  alpha=0.01,
                  learning_rate=1e-5,
                  target_accuracy=0.90,
-                 max_iter=10,
+                 max_iter=500,
                  random_state=0):
         self.alpha = alpha
         self.learning_rate = learning_rate
@@ -98,9 +98,9 @@ class LogisticClassifier:
         self.d = X.shape[1]
         self.X = np.hstack((np.ones((self.n, 1)), X))
         self.y = y.astype(int)
-        self.Y_onehot = pd.get_dummies(y)[[1, 2, 3]].values
-        self.num_classes = len(y.unique())
-        self.w = w0.copy()
+        self.Y_onehot = pd.get_dummies(y)[[0, 1, 2]].values
+        self.num_classes = 3
+        self.w = w0
         if self.w is None:
             self.w = np.random.randn(self.d + 1, self.num_classes)
         self.score_list.clear()
