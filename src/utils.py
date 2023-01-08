@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 
 def fetch_train_data(
@@ -71,8 +72,8 @@ def random_split(y: np.ndarray, n_split=5):
     Split data labeled with 'True to Size' into n_split partition.
     :Return: [group_1_index, ..., group_n_split_index]
     """
-    small_large_index = np.where(y == 1 or y == 3)[0]
-    true2size_index = np.where(y == 2)[0]
+    small_large_index = np.concatenate([np.where(y == 0)[0], np.where(y == 2)[0]])
+    true2size_index = np.where(y == 1)[0]
     np.random.shuffle(true2size_index)
     partitions = np.array_split(true2size_index, n_split)
     partitions = [
@@ -89,13 +90,15 @@ def random_split_aggr(model, X_train: np.ndarray, y_train: np.ndarray,
     Other args are required to be in form of dictionary.
     """
 
-    def partial_fit(X_train_: np.ndarray, y_train_: np.ndarray):
-        model.fit(X_train_, y_train_, **fit_args)
-        return model
+    def partial_fit(partition: np.ndarray):
+        print(np.unique(y_train[partition], return_counts=True))
+        new_model = deepcopy(model)
+        new_model.fit(X_train[partition], y_train[partition], **fit_args)
+        return new_model 
 
     partitions = random_split(y_train)
-    models = [partial_fit(X_train[part], y_train[part]) for part in partitions]
+    models = [partial_fit(part) for part in partitions]
     predictions = [model.predict(X_test) for model in models]
     predictions = list(map(list, zip(*predictions)))  # list transpose
     aggregate = [max(set(votes), key=votes.count) for votes in predictions]
-    evaluate_model(y_test, aggregate)
+    return evaluate_model(y_test, aggregate)
