@@ -55,6 +55,14 @@ def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
     """
     train_df = df.sample(frac=1 - test_size, random_state=random_state)
     test_df = df.drop(train_df.index)
+    test_df['fit'].replace({
+        'Small': '1',
+        'True to Size': '2',
+        'Large': '3'
+    },
+                           inplace=True)
+    train_df.reset_index(drop=True, inplace=True)
+    test_df.reset_index(drop=True, inplace=True)
     return train_df, test_df
 
 
