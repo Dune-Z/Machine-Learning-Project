@@ -514,37 +514,45 @@ class OneHotEncoder(DataTransformer):
                     df[f'{col}_{category}'] = (df[col] == category).astype(int)
         df.drop(self.cols, axis=1, inplace=True)
         return df
-    
-    
-class TargetEncoder:
+
+
+class TargetEncoder(DataTransformer):
     """
     Replacing categories by the mean value of target of category variables\n
     Target should be numeric 
     """
-    def __init__(self, cols: list = [], target: str = 'weight'):
+
+    def __init__(self, cols=[], target_cols=[], name=''):
+        super().__init__(cols, name)
         self.cols = cols
-        self.target = target
+        self.target_cols = target_cols
         self.mapping = {}
-        
+
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Fit to the training data and return the encoded data
         """
-        for cols in self.cols:
-            mapping = df.groupby(cols).mean(numeric_only=True)[self.target].to_dict()
-            self.mapping[cols] = mapping
-            df[cols].replace(mapping, inplace=True)
+        for col in self.cols:
+            self.mapping[col] = df.groupby(col)[
+                self.target_cols].mean().to_dict()
+            for target_col in self.target_cols:
+                df[f'{col}_{target_col}'] = df[col].map(
+                    self.mapping[col][target_col])
+                self.out_cols.append(f'{col}_{target_col}')
         return df
-    
+
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Return the encoded test data
         """
-        for cols in self.cols:
-            mapping = self.mapping[cols]
-            df[cols] = df[cols].map(mapping) 
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for col in self.cols:
+                for target_col in self.target_cols:
+                    df[f'{col}_{target_col}'] = df[col].map(
+                        self.mapping[col][target_col])
         return df
-            
+
 
 class StandardScaler(DataTransformer):
     """

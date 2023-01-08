@@ -46,6 +46,9 @@ def evaluate_model(y_true, y_pred, index='result') -> pd.DataFrame:
     score_df['f1_weighted'] = [
         f1_score(y_true, y_pred, average='weighted', zero_division=0)
     ]
+    score_df['#small'] = [(y_pred == 0).sum().item()]
+    score_df['#true2size'] = [(y_pred == 1).sum().item()]
+    score_df['#large'] = [(y_pred == 2).sum().item()]
     score_df.index = [index]
     return score_df
 
