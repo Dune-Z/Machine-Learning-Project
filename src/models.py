@@ -2,8 +2,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import tqdm
-
-from utils import onehot_encoding
+import pandas as pd
 
 
 def softmax(X):
@@ -97,7 +96,7 @@ class LogisticClassifier:
         self.d = X.shape[1]
         self.X = np.hstack((np.ones((self.n, 1)), X))
         self.y = y.astype(int)
-        self.Y_onehot = onehot_encoding(self.y, ['fit'])[[0, 1, 2]].values
+        self.Y_onehot = pd.get_dummies(y)[[1, 2, 3]].values
         self.num_classes = len(y.unique())
         self.w = w0.copy()
         if self.w is None:
@@ -366,17 +365,13 @@ class OrdinalClassifier:
         if w0_low == None:
             w0_low = np.random.randn(X.shape[1] + 1)
 
-        self designed clf
         self.clf_low.fit(X, y_low, w0=w0_low)
         self.clf_high.fit(X, y_high, w0=w0_high)
 
     def predict_proba(self, X):
-        self.clf_high.predict_proba(X)
-        self.clf_low.predict_proba(X)
-        
-        prob_1 = 1 - self.clf_low.predict_proba(x_val)
-        prob_2 = self.clf_low.predict_proba(x_val) - self.clf_high.predict_proba(x_val)
-        prob_3 = self.clf_high.predict_proba(x_val)
+        prob_1 = 1 - self.clf_low.predict_proba(X)
+        prob_2 = self.clf_low.predict_proba(X) - self.clf_high.predict_proba(X)
+        prob_3 = self.clf_high.predict_proba(X)
 
         prob = np.stack([prob_1, prob_2, prob_3]).T
         return prob
