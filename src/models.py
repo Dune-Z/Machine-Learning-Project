@@ -366,17 +366,13 @@ class OrdinalClassifier:
         if w0_low == None:
             w0_low = np.random.randn(X.shape[1] + 1)
 
-        self designed clf
         self.clf_low.fit(X, y_low, w0=w0_low)
         self.clf_high.fit(X, y_high, w0=w0_high)
 
     def predict_proba(self, X):
-        self.clf_high.predict_proba(X)
-        self.clf_low.predict_proba(X)
-        
-        prob_1 = 1 - self.clf_low.predict_proba(x_val)
-        prob_2 = self.clf_low.predict_proba(x_val) - self.clf_high.predict_proba(x_val)
-        prob_3 = self.clf_high.predict_proba(x_val)
+        prob_1 = 1 - self.clf_low.predict_proba(X)
+        prob_2 = self.clf_low.predict_proba(X) - self.clf_high.predict_proba(X)
+        prob_3 = self.clf_high.predict_proba(X)
 
         prob = np.stack([prob_1, prob_2, prob_3]).T
         return prob
