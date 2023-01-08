@@ -77,17 +77,22 @@ def main(args):
     ]
 
     train_df_prep = prep.fit_transform(train_df)
+    # Save the preprocessor
     save(prep, args.out_dir + '/preprocessor.pt')
 
+    # Get feature matrix and target vector
     X = train_df_prep.drop('fit', axis=1).values
     y = train_df_prep['fit'].values
 
+    # To tackle class imbalance, we split the majority class (True to Size) into 5 folds,
+    # and train the model on each fold separately. When predicting on the test set,
+    # we combine the predictions from all 5 folds and take the mode.
     def partial_fit(partition: np.ndarray):
-        print(np.unique(y[partition], return_counts=True))
         new_model = deepcopy(model)
         new_model.fit(X[partition], y[partition], **fit_args)
         return new_model
 
+    # Collect and save the models
     models = [partial_fit(part) for part in random_split(y)]
     save(models, args.out_dir + '/models.pt')
 
