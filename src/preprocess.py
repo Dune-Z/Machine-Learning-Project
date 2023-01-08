@@ -752,5 +752,6 @@ class SelectOutputColumns:
     """
 
     def __init__(self, target: str):
+        self.name = ''
         self.cols = None
         self.target = target
