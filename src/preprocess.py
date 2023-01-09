@@ -492,14 +492,22 @@ class OneHotEncoder(DataTransformer):
         """
         Fit to the training data and return the encoded data
         """
-        dummies = pd.get_dummies(df[self.cols])
-        self.out_cols = dummies.columns.tolist()
-        for col in self.cols:
-            self.categories[col] = df[col].dropna().unique().tolist()
-            if len(self.categories[col]) > self.max_categories:
+
+        def get_dummies_1d(s: pd.Series) -> pd.DataFrame:
+            col = s.name
+            cats = s.value_counts().keys()
+            out_cols = [f'{col}_{cat}' for cat in cats]
+            if len(cats) > self.max_categories:
                 warnings.warn(
-                    f"Column {col} has {len(self.categories[col])} categories, which is more than the maximum of {self.max_categories}. Please consider using other encoders."
+                    f"Column {col} has {len(cats)} categories, which is more than the maximum of {self.max_categories}. Please consider using other encoders."
                 )
+            self.categories[col] = cats
+            dummies = pd.DataFrame(index=s.index, columns=out_cols)
+            for cat in self.categories[col]:
+                dummies[f'{col}_{cat}'] = (s == cat).astype(int)
+            return dummies
+
+        dummies = [get_dummies_1d(df[col]) for col in self.cols]
         df = df.join(dummies)
         df.drop(self.cols, axis=1, inplace=True)
         return df
@@ -508,11 +516,17 @@ class OneHotEncoder(DataTransformer):
         """
         Return the encoded test data
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            for col in self.cols:
-                for category in self.categories[col]:
-                    df[f'{col}_{category}'] = (df[col] == category).astype(int)
+
+        def get_dummies_1d(s: pd.Series) -> pd.DataFrame:
+            col = s.name
+            out_cols = [f'{col}_{cat}' for cat in self.categories[col]]
+            dummies = pd.DataFrame(index=s.index, columns=out_cols)
+            for cat in self.categories[col]:
+                dummies[f'{col}_{cat}'] = (s == cat).astype(int)
+            return dummies
+
+        dummies = [get_dummies_1d(df[col]) for col in self.cols]
+        df = df.join(dummies)
         df.drop(self.cols, axis=1, inplace=True)
         return df
 
