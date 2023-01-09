@@ -8,6 +8,7 @@ class Preprocessor:
     def __init__(self, pipeline=[]):
         self.train_df = None
         self.test_df = None
+        self.item_size_mappings = None
         self.pipeline = pipeline
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -231,6 +232,24 @@ class Preprocessor:
             1: 'size_suffix'
         },
                             inplace=True)
+        # this mapping is somewhat opinionated
+        letter_size_mapping = {
+            'XXXXS': '4XS',
+            'XXXS': '3XS',
+            'XXS': '2XS',
+            'XXL': '2XL',
+            'XXXL': '3XL',
+            'XXXXL': '4XL',
+            '0X': 'XL',
+            '1X': '2XL',
+            '2X': '3XL',
+            '3X': '4XL',
+            'P-S': 'XS-S'
+        }
+
+        size_strings['size_main'].replace(letter_size_mapping,
+                                          regex=False,
+                                          inplace=True)
 
         df = df.join(size_strings[['size_main', 'size_suffix', 'size_scheme']])
 
@@ -418,6 +437,78 @@ class Preprocessor:
                 'bust_size', 'cup_size'
             ],
                             copy=False)
+        return df
+
+    def handle_size_mapping(self, df: pd.DataFrame, is_train=False):
+        """
+        If 'is_train' is True, fit the size mapping and transform the training data.\n
+        If 'is_train' is False, transform the test data using the fitted size mapping.\n
+        This function should be called after cleansing the 'size' column.
+        """
+
+        item_size_mains = df.groupby('item_name')['size_main'].unique()
+        size_scheme_items = df.groupby('size_scheme')['item_name'].unique()
+
+        if is_train:
+            self.item_size_mappings = pd.Series(index=item_size_mains.index,
+                                                dtype=object)
+
+            ordered_letter_sizes = [
+                '4XS', '3XS', '2XS', 'XS', 'XS-S', 'S', 'S-M', 'M', 'M-L', 'L',
+                'L-XL', 'XL', '2XL', '3XL', '4XL'
+            ]
+
+            def parse_letter_size(size):
+                if size in ordered_letter_sizes:
+                    return ordered_letter_sizes.index(size)
+                else:
+                    return len(ordered_letter_sizes) / 2
+
+            def parse_number_size(size):
+                import re
+                match = re.match(r'(\d+)((?:-)\d+)?', size)
+                if match.group(2) is None:
+                    return int(match.group(1))
+                else:
+                    return np.mean([int(match.group(1)), int(match.group(2))])
+
+            def get_size_mapping(sizes, parse_func):
+                sizes = sizes[~pd.isna(sizes)]
+                relative_index_mapping = {
+                    size: i
+                    for i, size in enumerate(
+                        sorted(sizes, key=lambda x: parse_func(x)))
+                }
+                index_mean = np.mean(
+                    [relative_index_mapping[size] for size in sizes])
+                index_bias_mapping = {
+                    size: relative_index_mapping[size] - index_mean
+                    for size in sizes
+                }
+                return index_bias_mapping
+
+            pos = size_scheme_items.loc['letter']
+            self.item_size_mappings[pos] = item_size_mains[pos].apply(
+                get_size_mapping, args=(parse_letter_size, ))
+
+            pos = size_scheme_items.loc['number']
+            self.item_size_mappings[pos] = item_size_mains[pos].apply(
+                get_size_mapping, args=(parse_number_size, ))
+
+            pos = size_scheme_items.loc['mixed']
+            self.item_size_mappings[pos] = item_size_mains[pos].apply(
+                get_size_mapping, args=(parse_letter_size, ))
+
+        def transform_size(row):
+            size = row['size_main']
+            mapping = self.item_size_mappings[row['item_name']]
+            if pd.isna(mapping) or size not in mapping:
+                return 0
+            else:
+                return mapping[size]
+
+        df.insert(5, 'size_bias', df.apply(transform_size, axis=1))
+
         return df
 
 
