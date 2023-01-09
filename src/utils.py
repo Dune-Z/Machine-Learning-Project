@@ -114,3 +114,38 @@ def random_split_aggr(model,
     predictions = list(map(list, zip(*predictions)))  # list transpose
     aggregate = np.array([max(set(votes), key=votes.count) for votes in predictions])
     return evaluate_model(y_test, aggregate)
+
+def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
+    """
+    Using AFTER 'fit' column is encoded as 0, 1, 2\n
+    - For numeric column, random interpolate values between current and extreme value
+    - For ordered category column, using extreme case (!!!Warning, may cause overfitting)
+    """
+    df_small_aug = None
+    df_large_aug = None
+
+    df_small = df.groupby('fit').get_group(0)
+    if ratio <= 1:
+        df_small_aug = df_small.sample(frac=ratio)
+    else:
+        df_small_aug = pd.concat([df_small.sample(frac=ratio - int(ratio)),
+                                pd.concat([df_small for _ in range(int(ratio))]) ], ignore_index=True)
+    for col in target_cols:
+        if df[col].dtype == (float or int):
+            df_small_aug[col] += np.random.rand(len(df_small_aug)) * (df_small_aug[col].max() - df_small_aug[col])
+        elif df[col].dtype.ordered:
+            df_small_aug[col] = df[col].max()
+
+    df_large = df.groupby('fit').get_group(2)
+    if ratio <= 1:
+        df_large_aug = df_large.sample(frac=ratio)
+    else:
+        df_large_aug = pd.concat([df_large.sample(frac=ratio - int(ratio)),
+                                pd.concat([df_large for _ in range(int(ratio))]) ], ignore_index=True)
+    for col in target_cols:
+        if df[col].dtype == (float or int):
+            df_large_aug[col] -= np.random.rand(len(df_large_aug)) * (df_large_aug[col] - df_large_aug[col].min())
+        elif df[col].dtype.ordered:
+            df_large_aug[col] = df[col].min()
+
+    return pd.concat([df, df_small_aug, df_large_aug], ignore_index=True)
