@@ -8,7 +8,7 @@ class Preprocessor:
     def __init__(self, pipeline=[]):
         self.train_df = None
         self.test_df = None
-        self.item_size_mappings = None
+        self.item_size_mappings = {}
         self.pipeline = pipeline
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -448,32 +448,48 @@ class Preprocessor:
 
         item_size_mains = df.groupby('item_name')['size_main'].unique()
         size_scheme_items = df.groupby('size_scheme')['item_name'].unique()
+        item_size_mappings = pd.Series(index=item_size_mains.index,
+                                       dtype=object)
 
-        if is_train:
-            self.item_size_mappings = pd.Series(index=item_size_mains.index,
-                                                dtype=object)
-
+        def parse_letter_size(size):
             ordered_letter_sizes = [
                 '4XS', '3XS', '2XS', 'XS', 'XS-S', 'S', 'S-M', 'M', 'M-L', 'L',
                 'L-XL', 'XL', '2XL', '3XL', '4XL'
             ]
+            if size in ordered_letter_sizes:
+                return ordered_letter_sizes.index(size)
+            else:
+                return len(ordered_letter_sizes) / 2
 
-            def parse_letter_size(size):
-                if size in ordered_letter_sizes:
-                    return ordered_letter_sizes.index(size)
-                else:
-                    return len(ordered_letter_sizes) / 2
+        def parse_number_size(size):
+            import re
+            match = re.match(r'(\d+)((?:-)\d+)?', size)
+            if match.group(2) is None:
+                return int(match.group(1))
+            else:
+                return np.mean([int(match.group(1)), int(match.group(2))])
 
-            def parse_number_size(size):
-                import re
-                match = re.match(r'(\d+)((?:-)\d+)?', size)
-                if match.group(2) is None:
-                    return int(match.group(1))
-                else:
-                    return np.mean([int(match.group(1)), int(match.group(2))])
-
-            def get_size_mapping(sizes, parse_func):
-                sizes = sizes[~pd.isna(sizes)]
+        def get_size_mapping(row, parse_func):
+            name, sizes = row['item_name'], row['size_main']
+            sizes = list(sizes[~pd.isna(row['size_main'])])
+            if name in self.item_size_mappings and not pd.isna(
+                    self.item_size_mappings[name]):
+                sizes += list(self.item_size_mappings[name].keys())
+                relative_index_mapping = {
+                    size: i
+                    for i, size in enumerate(
+                        sorted(sizes, key=lambda x: parse_func(x)))
+                }
+                index_bias_mapping = self.item_size_mappings[name].copy()
+                reference_size = next(iter(index_bias_mapping))
+                index_bias_mapping.update({
+                    size: relative_index_mapping[size] -
+                    relative_index_mapping[reference_size] +
+                    index_bias_mapping[reference_size]
+                    for size in index_bias_mapping
+                })
+                return index_bias_mapping
+            else:
                 relative_index_mapping = {
                     size: i
                     for i, size in enumerate(
@@ -487,27 +503,30 @@ class Preprocessor:
                 }
                 return index_bias_mapping
 
-            pos = size_scheme_items.loc['letter']
-            self.item_size_mappings[pos] = item_size_mains[pos].apply(
-                get_size_mapping, args=(parse_letter_size, ))
-
-            pos = size_scheme_items.loc['number']
-            self.item_size_mappings[pos] = item_size_mains[pos].apply(
-                get_size_mapping, args=(parse_number_size, ))
-
-            pos = size_scheme_items.loc['mixed']
-            self.item_size_mappings[pos] = item_size_mains[pos].apply(
-                get_size_mapping, args=(parse_letter_size, ))
-
         def transform_size(row):
-            size = row['size_main']
-            mapping = self.item_size_mappings[row['item_name']]
+            name, size = row['item_name'], row['size_main']
+            if pd.isna(name):
+                return 0
+            mapping = item_size_mappings[name]
             if pd.isna(mapping) or size not in mapping:
                 return 0
-            else:
-                return mapping[size]
+            return mapping[size]
 
-        df.insert(5, 'size_bias', df.apply(transform_size, axis=1))
+        pos = size_scheme_items.loc['letter']
+        item_size_mappings[pos] = item_size_mains[pos].reset_index().apply(
+            get_size_mapping, args=(parse_letter_size, ), axis=1)
+
+        pos = size_scheme_items.loc['number']
+        item_size_mappings[pos] = item_size_mains[pos].reset_index().apply(
+            get_size_mapping, args=(parse_number_size, ), axis=1)
+
+        pos = size_scheme_items.loc['mixed']
+        item_size_mappings[pos] = item_size_mains[pos].reset_index().apply(
+            get_size_mapping, args=(parse_letter_size, ), axis=1)
+
+        if is_train:
+            self.item_size_mappings = item_size_mappings
+        df['size_bias'] = df.apply(transform_size, axis=1)
 
         return df
 
