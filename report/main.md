@@ -1,6 +1,30 @@
-## Notes
+# Introduction to Machine Learning
+<center style='margin-bottom:1em; line-height: 1.25em'>
+Fall 2022 <br>
+University of Science and Technology of China
+</center>
+<!-- <div style='float:left; margin-left:60pt; text-align:center'>Yifei Zuo <br> PB20114514</div>
+<div style='float:right; margin-right:60pt; text-align:center'>Yunqin Zhu <br> PB20114514</div>
+<center>Yongfan Lai <br> PB20114514</center> -->
+<div style='float:left; line-height:1.25em; text-align: left'>
+Project Report <br>
+Lecturer: Jie Wang <br>
+Due: Jan. 11, 2023
+</div>
+<div style='float:right; line-height:1.25em; text-align: right'>
+PB20114514, Yifei Zuo, 33% <br>
+PB20061210, Yongfan Lai, 33% <br>
+PB20061372, Yunqin Zhu, 33% 
+</div>
+<br><br>
+<hr style='margin-top:1em'>
+
+## Introduction
+
+## Introduction
 
 ![](./figs/arch.drawio.svg)
+<figcaption>Figure 1: The architecture of our proposed model.</figcaption>
 
 Denote the item, the user, and the parent item of a transaction $t$ by $i$, $u$, and $p$, respectively. We model the true size of the item $i$ as
 

@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import warnings
 
+from utils import data_augmentation
+
 
 class Preprocessor:
 
@@ -38,6 +40,9 @@ class Preprocessor:
             # ComputeItemVectors
             elif dt.name == '__compute_item_vectors__':
                 df = self.compute_item_vectors(df, is_train=True)
+            elif dt.name == '__augment_data__':
+                df = data_augmentation(df, dt.target_cols, dt.ratio_small,
+                                       dt.ratio_large)
 
         return df
 
@@ -658,25 +663,44 @@ class OneHotEncoder(DataTransformer):
         self.max_categories = max_categories
         self.categories = {}
 
-    
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the encoded data
+        """
 
+        def get_dummies_1d(s: pd.Series) -> pd.DataFrame:
+            codes, cats = pd.factorize(s, sort=True)
+            self.categories[s.name] = cats
+            out_cols = [f'{s.name}_{cat}' for cat in cats]
+            dummy_mat = np.eye(len(cats), dtype=np.uint8).take(codes, axis=1).T
+            dummy_mat[codes == -1] = 0
+            return pd.DataFrame(dummy_mat, index=s.index, columns=out_cols)
 
+        dummies = [get_dummies_1d(df[col]) for col in self.cols]
+        df = df.join(dummies)
+        df.drop(self.cols, axis=1, inplace=True)
+        return df
 
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the encoded test data
+        """
 
+        def get_dummies_1d(s: pd.Series) -> pd.DataFrame:
+            s = s.astype(
+                pd.CategoricalDtype(categories=self.categories[s.name]))
+            codes, cats = pd.factorize(s, sort=True)
+            out_cols = [f'{s.name}_{cat}' for cat in cats]
+            dummy_mat = np.eye(len(cats), dtype=np.uint8).take(codes, axis=1).T
+            dummy_mat[codes == -1] = 0
+            return pd.DataFrame(dummy_mat, index=s.index, columns=out_cols)
 
+        dummies = [get_dummies_1d(df[col]) for col in self.cols]
+        df = df.join(dummies)
+        df.drop(self.cols, axis=1, inplace=True)
+        return df
 
-
-
-
-
-
-
-
-
-
-
-
-    def _fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         (Deprecated)
         Fit to the training data and return the encoded data
@@ -701,7 +725,7 @@ class OneHotEncoder(DataTransformer):
         df.drop(self.cols, axis=1, inplace=True)
         return df
 
-    def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         (Deprecated)
         Return the encoded test data
@@ -981,6 +1005,20 @@ class ComputeItemVectors:
     def __init__(self):
         self.name = '__compute_item_vectors__'
         self.cols = None
+
+
+class AugmentData:
+    """
+    Augment data by calling utls.data_augmentation().\n
+    The main logic is implemented in the Preprocessor class
+    """
+
+    def __init__(self, target_cols: list, ratio_small=3.6, ratio_large=2.7):
+        self.name = '__augment_data__'
+        self.cols = None
+        self.target_cols = target_cols
+        self.ratio_small = ratio_small
+        self.ratio_large = ratio_large
 
 
 class ItemVectorOptimizer:

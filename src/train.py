@@ -9,7 +9,7 @@ from utils import fetch_train_data, random_split
 from models import *
 from preprocess import *
 
-model = RandomClassifier()
+model = OrdinalClassifier()
 fit_args = {}
 
 prep = Preprocessor(pipeline=[
@@ -72,9 +72,9 @@ def main(args):
     X = train_df_prep.drop('fit', axis=1).values
     y = train_df_prep['fit'].values
 
-    # To tackle class imbalance, we split the majority class (True to Size) into 5 folds,
+    # To tackle class imbalance, we split the majority class (True to Size) into 3 folds,
     # and train the model on each fold separately. When predicting on the test set,
-    # we aggregate the predictions from all 5 folds and vote.
+    # we aggregate the predictions from all 3 folds and vote.
     def partial_fit(partition: np.ndarray):
         new_model = deepcopy(model)
         new_model.fit(X[partition], y[partition], **fit_args)

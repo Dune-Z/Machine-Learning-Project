@@ -1,0 +1,155 @@
+/* https://raw.githubusercontent.com/sindresorhus/github-markdown-css/main/github-markdown.css */
+@import url("https://cdn.jsdelivr.net/gh/vsalvino/computer-modern@main/fonts/serif.css");
+/* @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC&display=swap"); */
+@counter-style decimal-parentheses {
+    system: extends decimal;
+    prefix: "(";
+    suffix: ") ";
+}
+@counter-style lower-alpha-parentheses {
+    system: extends lower-alpha;
+    prefix: "(";
+    suffix: ") ";
+}
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #0d1117;
+    }
+    .github-markdown-body img {
+        background-color: transparent;
+        filter: invert() opacity(0.9);
+    }
+}
+.github-markdown-body {
+    font-size: 12pt;
+    font-family: "Computer Modern Serif", "Times New Roman", Times, Baskerville,
+        Georgia, "SimSun", "Source Han Serif SC", "STSong", "Noto Serif SC",
+        serif;
+    max-width: 7.2in;
+    margin: 0.5in auto;
+    padding-left: 0.65in;
+    padding-right: 0.65in;
+}
+.github-markdown-body img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 90%;
+}
+.github-markdown-body figcaption {
+    font-size: 0.875em;
+    text-align: center;
+    margin-top: 10px;
+}
+.github-markdown-body figcaption + table {
+    margin-top: 8px;
+}
+.github-markdown-body .katex {
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: 1em;
+}
+.github-markdown-body p {
+    text-indent: 2em;
+    text-align: justify;
+    margin-bottom: 0;
+}
+.github-markdown-body hr {
+    background-color: transparent;
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+.github-markdown-body h1 {
+    font-size: 1.25em;
+    text-align: center;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+.github-markdown-body h2 {
+    font-size: 1.25em;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+.github-markdown-body li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+.github-markdown-body li p{
+    text-indent: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.github-markdown-body li + li {
+    margin-top: 0.5em;
+}
+.github-markdown-body ul {
+    list-style-type: disc;
+}
+.github-markdown-body ol ol,
+.github-markdown-body ul ol {
+    list-style-type: decimal-parentheses;
+}
+.github-markdown-body ul ul ol,
+.github-markdown-body ul ol ol,
+.github-markdown-body ol ul ol,
+.github-markdown-body ol ol ol {
+    list-style-type: lower-alpha-parentheses;
+}
+.github-markdown-body table {
+    font-size: 0.875em;
+    padding: 0;
+    margin: 16px auto;
+    width: max-content;
+    max-width: 90%;
+    position: relative;
+    overflow: visible;
+}
+.github-markdown-body table tr,
+.github-markdown-body table tr:nth-child(2n) {
+    background-color: transparent;
+    border: 0;
+}
+.github-markdown-body table th,
+.github-markdown-body table td {
+    background-color: transparent;
+    border: 0;
+    padding: 2px 16px;
+}
+.github-markdown-body table th:first-child,
+.github-markdown-body table td:first-child {
+    padding-left: 24px;
+}
+.github-markdown-body table th:last-child,
+.github-markdown-body table td:last-child {
+    padding-right: 24px;
+}
+.github-markdown-body hr,
+.github-markdown-body table thead,
+.github-markdown-body table tbody {
+    position: relative;
+}
+.github-markdown-body hr::after,
+.github-markdown-body table::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 200%;
+    transform: scaleY(0.5);
+    transform-origin: top;
+}
+.github-markdown-body hr::after {
+    border-top: 3px solid var(--color-fg-default);
+    top: 0;
+}
+.github-markdown-body table::after {
+    border-top: 3px solid var(--color-fg-default);
+    border-bottom: 3px solid var(--color-fg-default);
+    top: -3px;
+}
+.github-markdown-body table thead tr:last-child {
+    border-bottom: 1px solid var(--color-fg-default);
+}
+.github-markdown-body code{
+    font-size: 9pt !important;
+}
