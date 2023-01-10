@@ -72,7 +72,7 @@ def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
     return train_df, test_df
 
 
-def random_split(y: np.ndarray, n_split=5):
+def random_split(y: np.ndarray, n_split=3):
     """
     Split data labeled with 'True to Size' into n_split partition.
     :Return: [group_1_index, ..., group_n_split_index]

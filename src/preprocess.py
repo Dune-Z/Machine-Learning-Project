@@ -12,7 +12,7 @@ class Preprocessor:
         self.item_size_mappings = {}
         self.parent_item_vectors = None
         self.parent_item_deviations = None
-        self.default_item_deviations = None
+        self.default_item_vectors = None
         self.default_item_deviations = None
         self.pipeline = pipeline
 
