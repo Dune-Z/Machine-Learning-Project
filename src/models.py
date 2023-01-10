@@ -4,7 +4,65 @@ import matplotlib.pyplot as plt
 import tqdm
 import pandas as pd
 
+from scipy.optimize import minimize
 
+def softmax(z):
+    return np.exp(z) / np.sum(np.exp(z), axis=1, keepdims=True)
+
+
+# Define the multiclass logistic regression function to be optimized
+def multiclass_logreg(w, X, y, num_classes):
+    m, n = X.shape
+    w = w.reshape((num_classes, n))
+    logits = X @ w.T
+    prob = softmax(logits)
+    ll = -np.mean(np.log(prob[range(m), y]))
+    return ll
+
+
+# Define the gradient of the multiclass logistic regression function
+def grad_multiclass_logreg(w, X, y, num_classes):
+    m, n = X.shape
+    w = w.reshape((num_classes, n))
+    logits = X @ w.T
+    prob = softmax(logits)
+    prob[range(m), y] -= 1
+    grad = prob.T @ X / m
+    return grad.ravel()
+
+
+class LogisticClassifier():
+
+    def __init__(self, num_class=3) -> None:
+        self.w = None
+        self.d = None
+        self.num_class = num_class
+
+    def fit(self, X, y, method='BFGS'):
+        self.d = X.shape[1]
+        initial_w = np.random.randn(self.num_class * self.d)
+        res = minimize(multiclass_logreg, initial_w, args=(X.to_numpy(), y, self.num_class), jac=grad_multiclass_logreg, method=method)
+
+        self.w = res.x.reshape((self.num_class, self.d))
+
+    def predict_proba(self, X):
+        """
+        Predict probability of each class
+        """
+        logits = X.to_numpy() @ self.w.T
+        return softmax(logits)
+
+    def predict(self, X):
+        """
+        Predict the labels.
+        """
+        prob = self.predict_proba(X)
+        return np.argmax(prob, axis=1)
+
+
+"""
+Previous version
+"""
 class RandomClassifier:
     """
     Generate a random number between 0 and 2 for prediction.
@@ -21,7 +79,7 @@ class RandomClassifier:
         return np.random.randint(0, 3, size=X.shape[0])
 
 
-def softmax(X):
+def softmax_(X):
     """
     Softmax function.
     """
@@ -61,13 +119,9 @@ sigmoid = np.vectorize(sigmoid)
 log = np.vectorize(log)
 
 
-class LogisticClassifier:
+class LogisticClassifier_pre:
     """
     Multinomial Logistic Regression using GD with L2 regularization.
-
-    存在的问题：\n
-    1. loss计算十分缓慢 (且存在overflow bug)
-    2. 模型训练时score波动较大
     """
 
     def __init__(self,
@@ -167,7 +221,7 @@ class LogisticClassifier:
         Predict the probabilities of the positive class.
         """
         X = np.hstack((np.ones((X.shape[0], 1)), X))
-        return softmax(-X @ self.w)
+        return softmax_(-X @ self.w)
 
     def loss(self):
         """
@@ -182,7 +236,7 @@ class LogisticClassifier:
 
     def gradient(self):
         Z = -self.X @ self.w
-        self.prob = softmax(Z)
+        self.prob = softmax_(Z)
         Y = self.Y_onehot
         gd = 1 / self.n * (self.X.T @ (Y - self.prob)) + self.alpha * self.w
         return gd
