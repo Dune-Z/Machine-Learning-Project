@@ -38,21 +38,21 @@ class LogisticClassifier():
         self.d = None
         self.num_class = num_class
 
-    def fit(self, X, y, method='BFGS'):
+    def fit(self, X: np.ndarray, y: np.ndarray, method='BFGS'):
         self.d = X.shape[1]
         initial_w = np.random.randn(self.num_class * self.d)
         res = minimize(multiclass_logreg, initial_w, args=(X.to_numpy(), y, self.num_class), jac=grad_multiclass_logreg, method=method)
 
         self.w = res.x.reshape((self.num_class, self.d))
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: np.ndarray):
         """
         Predict probability of each class
         """
         logits = X.to_numpy() @ self.w.T
         return softmax(logits)
 
-    def predict(self, X):
+    def predict(self, X: np.ndarray):
         """
         Predict the labels.
         """
