@@ -658,8 +658,27 @@ class OneHotEncoder(DataTransformer):
         self.max_categories = max_categories
         self.categories = {}
 
-    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def _fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
+        (Deprecated)
         Fit to the training data and return the encoded data
         """
 
@@ -682,8 +701,9 @@ class OneHotEncoder(DataTransformer):
         df.drop(self.cols, axis=1, inplace=True)
         return df
 
-    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
+        (Deprecated)
         Return the encoded test data
         """
 
