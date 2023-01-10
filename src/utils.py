@@ -93,7 +93,8 @@ def random_split_aggr(model,
                       y_train: np.ndarray,
                       X_test: np.ndarray,
                       y_test: np.ndarray,
-                      fit_args: dict = {}):
+                      fit_args: dict = {},
+                      n_split=3):
     """
     Apply random split to deal with imbalanced data.
     Require model to have method: fit(X_train, y_train) and predict(X_test)
@@ -106,7 +107,7 @@ def random_split_aggr(model,
         new_model.fit(X_train[partition], y_train[partition], **fit_args)
         return new_model
 
-    partitions = random_split(y_train)
+    partitions = random_split(y_train, n_split=n_split)
     models = [partial_fit(part) for part in partitions]
     predictions = [model.predict(X_test) for model in models]
     predictions = list(map(list, zip(*predictions)))  # list transpose

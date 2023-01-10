@@ -41,7 +41,7 @@ class LogisticClassifier():
     def fit(self, X: np.ndarray, y: np.ndarray, method='BFGS'):
         self.d = X.shape[1]
         initial_w = np.random.randn(self.num_class * self.d)
-        res = minimize(multiclass_logreg, initial_w, args=(X.to_numpy(), y, self.num_class), jac=grad_multiclass_logreg, method=method)
+        res = minimize(multiclass_logreg, initial_w, args=(X, y, self.num_class), jac=grad_multiclass_logreg, method=method)
 
         self.w = res.x.reshape((self.num_class, self.d))
 
