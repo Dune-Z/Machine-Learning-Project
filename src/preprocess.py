@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 import pandas as pd
 import warnings
@@ -9,6 +10,10 @@ class Preprocessor:
         self.train_df = None
         self.test_df = None
         self.item_size_mappings = {}
+        self.parent_item_vectors = None
+        self.parent_item_deviations = None
+        self.default_item_deviations = None
+        self.default_item_deviations = None
         self.pipeline = pipeline
 
     def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -16,16 +21,23 @@ class Preprocessor:
         Fit all transformers and transform the training data.
         """
         self.train_df = df
+        df.reset_index(drop=True, inplace=True)
         for i, dt in enumerate(self.pipeline):
             print(type(dt))
             if dt.cols is not None:
                 df = dt.fit_transform(df)
-                continue
             # SelectOutputColumns
-            for target_dt in self.pipeline:
-                if dt.target == target_dt.name:
-                    self.pipeline[i + 1].cols += (target_dt.out_cols)
-                    break
+            elif dt.name == '__select_output_columns__':
+                for target_dt in self.pipeline:
+                    if dt.target == target_dt.name:
+                        self.pipeline[i + 1].cols += (target_dt.out_cols)
+                        break
+            # HandleSizeMapping
+            elif dt.name == '__handle_size_mapping__':
+                df = self.handle_size_mapping(df, is_train=True)
+            # ComputeItemVectors
+            elif dt.name == '__compute_item_vectors__':
+                df = self.compute_item_vectors(df, is_train=True)
 
         return df
 
@@ -34,9 +46,17 @@ class Preprocessor:
         Transform the test data.
         """
         self.test_df = df
+        df.reset_index(drop=True, inplace=True)
         for dt in self.pipeline:
             if dt.cols is not None:
                 df = dt.transform(df)
+            # HandleSizeMapping
+            elif dt.name == '__handle_size_mapping__':
+                df = self.handle_size_mapping(df)
+            # ComputeItemVectors
+            elif dt.name == '__compute_item_vectors__':
+                df = self.compute_item_vectors(df)
+
         return df
 
     def cleanse(self,
@@ -530,6 +550,46 @@ class Preprocessor:
 
         return df
 
+    def compute_item_vectors(self, df: pd.DataFrame, is_train=False):
+        """
+        If 'is_train' is True, fit the item vectors and transform the training data.\n
+        If 'is_train' is False, transform the test data using the fitted item vectors.\n
+        !!! This function should be called after handling the size mapping
+        and transforming 'fit' & 'item_name' & 'cup_size' using OrdinalEncoder !!!
+        """
+        if is_train:
+            optim = ItemVectorOptimizer(df)
+            for i in range(1, 10):
+                print(f'Optimizing weights and thresholds, round {i}')
+                optim.optimize_weights_thresholds(lr=1e-3 / i, max_iter=300)
+                print(f'Optimizing item vectors, round {i}')
+                optim.optimize_item_vectors(lr=1e-5 / i, max_iter=300)
+            self.parent_item_vectors = optim.pi_vec
+            self.parent_item_deviations = optim.pi_dev
+            df[[
+                'item_weight', 'item_height', 'item_bust_size', 'item_cup_size'
+            ]] = optim.i_vec
+            self.default_item_vector = optim.pi_vec.mean(
+                dim=0).detach().numpy()
+            self.default_item_deviation = optim.pi_dev.mean(
+                dim=0).detach().numpy()
+            return df
+
+        def transform_item_name(row):
+            name, size = row['item_name'], row['size_bias']
+            if pd.isna(name):
+                return self.default_item_vector + self.default_item_deviation * size
+            else:
+                return self.parent_item_vectors[int(
+                    name)] + self.parent_item_deviations[int(name)] * size
+
+        df[['item_weight', 'item_height', 'item_bust_size',
+            'item_cup_size']] = df.apply(transform_item_name,
+                                         axis=1,
+                                         result_type='expand')
+
+        return df
+
 
 class DataTransformer:
     """
@@ -872,11 +932,150 @@ class DropColumns(DataTransformer):
 
 class SelectOutputColumns:
     """
-    Select the output columns of a named DataTransformer.\n
-    The main logic is implemented in the Preprocessor class as I have not found a better way to do this.
-    """
+    Select the output columns of a named DataTransformer.\nhe main logic is implemented in the Preprocessor class as I have not found a better way to do this.
+    el"""
 
     def __init__(self, target: str):
-        self.name = ''
+        self.name = '__select_output_columns__'
         self.cols = None
         self.target = target
+
+
+class HandleSizeMapping:
+    """
+    Handle size mappings by calling Preprocessor.handle_size_mapping().\n
+    The main logic is implemented in the Preprocessor class
+    """
+
+    def __init__(self):
+        self.name = '__handle_size_mapping__'
+        self.cols = None
+
+
+class ComputeItemVectors:
+    """
+    Compute item vectors by calling Preprocessor.compute_item_vectors().\n
+    The main logic is implemented in the Preprocessor class
+    """
+
+    def __init__(self):
+        self.name = '__compute_item_vectors__'
+        self.cols = None
+
+
+class ItemVectorOptimizer:
+
+    def __init__(
+            self,
+            df: pd.DataFrame,
+            w=torch.ones(4, dtype=torch.float32),
+            b_1=0.0,
+            b_2=0.0,
+    ):
+        # ground truth
+        self.y = torch.tensor(df['fit'].values, dtype=torch.long)
+        self.y_1 = (self.y == 0).type(torch.long) - (self.y == 1).type(
+            torch.long)
+        self.y_2 = (self.y == 1).type(torch.long) - (self.y == 2).type(
+            torch.long)
+        # Loss weights. First, we compute the inverse of the class frequency,
+        # then we normalize the weights so that they sum to 1.
+        self.weights = 1 / torch.tensor(
+            df['fit'].value_counts().sort_index().values, dtype=torch.float32)
+        self.weights /= torch.sum(self.weights)
+        self.weights += 2
+        self.weights = self.weights[self.y]
+        # size bias
+        self.bias = torch.tensor(df['size_bias'].values, dtype=torch.float32)
+        # user vectors
+        self.u_vec = torch.tensor(
+            df[['weight', 'height', 'bust_size', 'cup_size']].values,
+            dtype=torch.float32)
+        # parent item index for each item
+        self.pi_idx = torch.tensor(df['item_name'].values, dtype=torch.long)
+        # item index for each parent item
+        self.pi_idx_inv = torch.tensor(
+            df.groupby('item_name').sample(1).sort_index().index.values,
+            dtype=torch.long)
+        # (initial) parent item vectors
+        self.pi_vec = torch.tensor(df.groupby('item_name')[[
+            'weight', 'height', 'bust_size', 'cup_size'
+        ]].mean().sort_index().values,
+                                   dtype=torch.float32)
+        # (initial) parent item deviations
+        self.pi_dev = torch.ones_like(self.pi_vec)
+        # (initial) weights & thresholds
+        self.w = w
+        self.b_1 = b_1
+        self.b_2 = b_2
+        # item vectors
+        self.i_vec = self.pi_vec[self.pi_idx] + (self.bias *
+                                                 self.pi_dev[self.pi_idx].T).T
+        # fitness scores
+        self.f = (self.i_vec - self.u_vec) @ self.w
+
+    # Projected Gradient Descent 1
+    def optimize_weights_thresholds(self, lr=0.01, max_iter=1000):
+        for i in range(max_iter + 1):
+            # calculate gradients
+            sigma_1 = torch.sigmoid(self.y_1 * (self.b_1 - self.f))
+            sigma_2 = torch.sigmoid(self.y_2 * (self.b_2 - self.f))
+            grad_w = torch.mean(
+                ((self.y_1 * (1 - sigma_1) + self.y_2 *
+                  (1 - sigma_2))[:, None] *
+                 (self.i_vec - self.u_vec)) * self.weights[:, None],
+                dim=0)
+            grad_b_1 = torch.mean(-self.y_1 * (1 - sigma_1) * self.weights)
+            grad_b_2 = torch.mean(-self.y_2 * (1 - sigma_2) * self.weights)
+            # update weights and project to non-negative orthant
+            self.w -= lr * grad_w
+            self.w = torch.max(self.w, torch.zeros_like(self.w))
+            # update thresholds
+            self.b_1 -= lr * grad_b_1
+            self.b_2 -= lr * grad_b_2
+            # update fitness scores and loss
+            self.f = (self.i_vec - self.u_vec) @ self.w
+            self.loss = torch.mean(
+                (-torch.log(sigma_1) - torch.log(sigma_2)) * self.weights)
+            if i % 100 == 0:
+                print(f'Iteration {i}: loss = {self.loss}')
+
+    # Projected Gradient Descent 2
+    def optimize_item_vectors(self, lr=0.01, max_iter=1000):
+        for i in range(max_iter + 1):
+            # calculate gradients
+            sigma_1 = torch.sigmoid(self.y_1 * (self.b_1 - self.f))
+            sigma_2 = torch.sigmoid(self.y_2 * (self.b_2 - self.f))
+            grad_i_vec = (self.y_1 * (1 - sigma_1) + self.y_2 *
+                          (1 - sigma_2))[:, None] * self.w
+            grad_pi_vec = grad_i_vec[self.pi_idx_inv]
+            grad_pi_dev = (self.bias[:, None] * grad_i_vec)[self.pi_idx_inv]
+            # update parent item vectors and project deviations to non-negative orthant
+            self.pi_vec -= lr * grad_pi_vec
+            self.pi_dev -= lr * grad_pi_dev
+            self.pi_dev = torch.max(self.pi_dev, torch.zeros_like(self.pi_dev))
+            # update item vectors, fitness scores and loss
+            self.i_vec = self.pi_vec[
+                self.pi_idx] + self.bias[:, None] * self.pi_dev[self.pi_idx]
+            self.f = (self.i_vec - self.u_vec) @ self.w
+            self.loss = torch.mean(
+                (-torch.log(sigma_1) - torch.log(sigma_2)) * self.weights)
+            if i % 100 == 0:
+                print(f'Iteration {i}: loss = {self.loss}')
+
+    def predict_proba(self):
+
+        prob_2 = torch.sigmoid(self.f - self.b_2)
+        prob_1 = torch.sigmoid(self.f - self.b_1) - prob_2
+        prob_0 = 1 - prob_1 - prob_2
+        return torch.stack([prob_0, prob_1, prob_2], dim=1)
+
+    def predict(self):
+        return torch.argmax(self.predict_proba(), dim=1)
+
+    def accuracy(self):
+        return torch.mean((self.predict() == self.y).type(torch.float32))
+
+    def f1_score(self):
+        from sklearn.metrics import f1_score
+        return f1_score(self.y, self.predict(), average='macro')

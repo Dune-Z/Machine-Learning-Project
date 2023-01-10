@@ -67,8 +67,6 @@ def train_test_split(df: pd.DataFrame, test_size=0.2, random_state=42):
         'Large': 3
     },
                            inplace=True)
-    train_df.reset_index(drop=True, inplace=True)
-    test_df.reset_index(drop=True, inplace=True)
     pos = test_df['item_name'].str.contains('\ufeff', na=False)
     test_df.loc[pos, 'fit'] = 2
     return train_df, test_df
@@ -112,8 +110,10 @@ def random_split_aggr(model,
     models = [partial_fit(part) for part in partitions]
     predictions = [model.predict(X_test) for model in models]
     predictions = list(map(list, zip(*predictions)))  # list transpose
-    aggregate = np.array([max(set(votes), key=votes.count) for votes in predictions])
+    aggregate = np.array(
+        [max(set(votes), key=votes.count) for votes in predictions])
     return evaluate_model(y_test, aggregate)
+
 
 def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
     """
@@ -128,11 +128,15 @@ def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
     if ratio <= 1:
         df_small_aug = df_small.sample(frac=ratio)
     else:
-        df_small_aug = pd.concat([df_small.sample(frac=ratio - int(ratio)),
-                                pd.concat([df_small for _ in range(int(ratio))]) ], ignore_index=True)
+        df_small_aug = pd.concat([
+            df_small.sample(frac=ratio - int(ratio)),
+            pd.concat([df_small for _ in range(int(ratio))])
+        ],
+                                 ignore_index=True)
     for col in target_cols:
         if df[col].dtype == (float or int):
-            df_small_aug[col] += np.random.rand(len(df_small_aug)) * (df_small_aug[col].max() - df_small_aug[col])
+            df_small_aug[col] += np.random.rand(len(df_small_aug)) * (
+                df_small_aug[col].max() - df_small_aug[col])
         elif df[col].dtype.ordered:
             df_small_aug[col] = df[col].max()
 
@@ -140,11 +144,15 @@ def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
     if ratio <= 1:
         df_large_aug = df_large.sample(frac=ratio)
     else:
-        df_large_aug = pd.concat([df_large.sample(frac=ratio - int(ratio)),
-                                pd.concat([df_large for _ in range(int(ratio))]) ], ignore_index=True)
+        df_large_aug = pd.concat([
+            df_large.sample(frac=ratio - int(ratio)),
+            pd.concat([df_large for _ in range(int(ratio))])
+        ],
+                                 ignore_index=True)
     for col in target_cols:
         if df[col].dtype == (float or int):
-            df_large_aug[col] -= np.random.rand(len(df_large_aug)) * (df_large_aug[col] - df_large_aug[col].min())
+            df_large_aug[col] -= np.random.rand(len(df_large_aug)) * (
+                df_large_aug[col] - df_large_aug[col].min())
         elif df[col].dtype.ordered:
             df_large_aug[col] = df[col].min()
 
