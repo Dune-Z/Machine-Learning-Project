@@ -29,6 +29,40 @@
     margin: 0.5in auto;
     padding-left: 0.65in;
     padding-right: 0.65in;
+    line-height: 1.25em;
+}
+.github-markdown-body h1 {
+    counter-reset: headings2 headings3 figure-counter;
+}
+.github-markdown-body h2::before {
+    content: counter(headings2) " ";
+    counter-increment: headings2;
+    margin-right: 0.5em;
+}
+.github-markdown-body h2 {
+    counter-reset: headings3;
+}
+.github-markdown-body h3:before {
+    content: counter(headings2) "." counter(headings3) " ";
+    counter-increment: headings3;
+    margin-right: 0.5em;
+}
+.github-markdown-body h3 {
+    counter-reset: headings4;
+}
+.github-markdown-body h4:before {
+    content: counter(headings2) "." counter(headings3) "." counter(headings4)
+        " ";
+    counter-increment: headings4;
+    margin-right: 0.5em;
+}
+.github-markdown-body figcaption::before {
+    content: "Figure " counter(figure-counter) ": ";
+    counter-increment: figure-counter;
+}
+.github-markdown-body .non-numbered::before {
+    content: none;
+    counter-increment: none;
 }
 .github-markdown-body img {
     display: block;
@@ -67,7 +101,17 @@
     border-bottom: 0;
 }
 .github-markdown-body h2 {
-    font-size: 1.25em;
+    font-size: 1em;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+.github-markdown-body h3 {
+    font-size: 1em;
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+.github-markdown-body h4 {
+    font-size: 1em;
     padding-bottom: 0;
     border-bottom: 0;
 }
@@ -75,7 +119,7 @@
     margin-top: 0.5em;
     margin-bottom: 0.5em;
 }
-.github-markdown-body li p{
+.github-markdown-body li p {
     text-indent: 0;
     margin-top: 0;
     margin-bottom: 0;
@@ -150,6 +194,6 @@
 .github-markdown-body table thead tr:last-child {
     border-bottom: 1px solid var(--color-fg-default);
 }
-.github-markdown-body code{
-    font-size: 9pt !important;
+.github-markdown-body code {
+    background-color: transparent;
 }
