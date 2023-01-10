@@ -115,7 +115,7 @@ def random_split_aggr(model,
     return evaluate_model(y_test, aggregate)
 
 
-def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
+def data_augmentation(df: pd.DataFrame, target_cols: list, ratio_small=3.6, ratio_large=2.7):
     """
     Using AFTER 'fit' column is encoded as 0, 1, 2\n
     - For numeric column, random interpolate values between current and extreme value
@@ -125,12 +125,12 @@ def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
     df_large_aug = None
 
     df_small = df.groupby('fit').get_group(0)
-    if ratio <= 1:
-        df_small_aug = df_small.sample(frac=ratio)
+    if ratio_small <= 1:
+        df_small_aug = df_small.sample(frac=ratio_small)
     else:
         df_small_aug = pd.concat([
-            df_small.sample(frac=ratio - int(ratio)),
-            pd.concat([df_small for _ in range(int(ratio))])
+            df_small.sample(frac=ratio_small - int(ratio_small)),
+            pd.concat([df_small for _ in range(int(ratio_small))])
         ],
                                  ignore_index=True)
     for col in target_cols:
@@ -141,12 +141,12 @@ def data_augmentation(df: pd.DataFrame, target_cols: list, ratio=0.5):
             df_small_aug[col] = df[col].max()
 
     df_large = df.groupby('fit').get_group(2)
-    if ratio <= 1:
-        df_large_aug = df_large.sample(frac=ratio)
+    if ratio_large <= 1:
+        df_large_aug = df_large.sample(frac=ratio_large)
     else:
         df_large_aug = pd.concat([
-            df_large.sample(frac=ratio - int(ratio)),
-            pd.concat([df_large for _ in range(int(ratio))])
+            df_large.sample(frac=ratio_large - int(ratio_large)),
+            pd.concat([df_large for _ in range(int(ratio_large))])
         ],
                                  ignore_index=True)
     for col in target_cols:
