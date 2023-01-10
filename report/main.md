@@ -28,6 +28,8 @@ PB20061372, Yunqin Zhu, 33%
 
 ### Data Cleansing
 
+!!!!!!!! ZYQ
+
 #### Numerical Features
 
 #### Categorical Features
@@ -66,6 +68,8 @@ In this perspective, we keep `item_name` as the original and remove `brand`, `ca
 
 ### Handling Data Imbalance
 
+!!!!!!!! LYF
+
 #### Under-sampling
 
 #### Data Augmentation
@@ -85,12 +89,14 @@ Noting that we don’t necessarily have to split the dominant class into `n` sam
 
 ## METHODOLOGY
 
-### 
+### Overview
 
 ![](./figs/arch.drawio.svg)
 <figcaption>The architecture of our proposed model.</figcaption>
 
 ### Feature Learning
+
+!!!!!!!! ZYQ
 
 #### Leveraging Item Sizes
 
@@ -125,7 +131,11 @@ Note that, in Prob. (1), we add the constraint $\mathbf{d}_p \ge \mathbf{0}$  to
 
 #### Detecting User Prototypes
 
+
+
 ### Fit Feedback Classification
+
+!!!!!!!! LYF
 
 #### Ordinal Logistic Regression
 

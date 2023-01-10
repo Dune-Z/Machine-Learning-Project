@@ -845,6 +845,33 @@ class MinMaxScaler(DataTransformer):
         return df
 
 
+class ConstantScaler(DataTransformer):
+    """
+    Multiply features by a constant to scale them.
+    """
+
+    def __init__(self, value=0.1, cols=[], name=''):
+        super().__init__(cols, name)
+        self.value = value
+
+    def fit_transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Fit to the training data and return the scaled data
+        """
+        self.out_cols = self.cols
+        for col in self.cols:
+            df[col] = df[col] * self.value
+        return df
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the scaled test data
+        """
+        for col in self.cols:
+            df[col] = df[col] * self.value
+        return df
+
+
 class MeanImputer(DataTransformer):
     """
     Impute missing values with the mean along each column.
