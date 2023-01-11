@@ -68,15 +68,15 @@ In this perspective, we keep `item_name` as the original and remove `brand`, `ca
 
 ### Handling Data Imbalance
 
-!!!!!!!! LYF
-
-#### Under-sampling
+In this project, we encounter the data imbalance problem, that is, if you just fill all the training data into your model, your model would probably learn to predict all the samples to be `True to Size`. Observing the orginal data, we find that they are unevenly distributed, where majority case accounts to more than 80% of all the samples. To address this problem, we come up with two alternative tactics:
 
 #### Data Augmentation
 
+This method bases on the common sense that if a cloth is small for one person, then it is likely to be small for persons whose bust size is larger. In this way, we randomly fetch data samples with `small` label, then duplicate it with bigger values in "weight", "height", "cup_size", "bust_size" column and vice versa. Moreover, during the experiment phase, we find that letting the number of `large` data slightly less than other two classes data can have the better performance than averaging three classes. Therefore, setting the upsampling ratio to 2.7 for `large` data and 3.6 for `small` data, we can get fairly augmented train data.
+
 #### Random Split & Aggregation
 
-To handle the imbalance dataset, which could lead to high `accuracy` while achieving relative lower `f1_score`, we present a simple but effective method called `random_split_aggregation` model. It basically splitting the dominant class `True to Size` into `n` different group randomly, and concatenate them with `n` identical copy of the others, forming into `n` generated datasets. Then we feed them into `n` different workers which train and result in `n` models. We use each model to predict its own predictions and we sent them into Aggregator, who will give the final predictions by voting from the `n` workers’ predictions.
+It basically splitting the dominant class `True to Size` into `n` different group randomly, and concatenate them with `n` identical copy of the others, forming into `n` generated datasets. Then we feed them into `n` different workers which train and result in `n` models. We use each model to predict its own predictions and we sent them into Aggregator, who will give the final predictions by voting from the `n` workers’ predictions.
 
 ![Screenshot 2023-01-10 at 22.25.05](./figs/Screenshot%202023-01-10%20at%2022.25.05.png)
 
@@ -135,11 +135,23 @@ Note that, in Prob. (1), we add the constraint $\mathbf{d}_p \ge \mathbf{0}$  to
 
 ### Fit Feedback Classification
 
-!!!!!!!! LYF
+In preceding part, we already have a penetrating insight of our tasks. As for the final models, considering the model performance and the implementing difficulties, we choose the Logistic Regression model to implement.
+
+#### Multinomial Logistic Regression
+
+At first, we implemented the classifier with gradient descent algorithm. However, its performance not so good as the model from sklearn library. So we imitate the sklearn implementation, using BFGS method in scipy.optimize to minimize the multiclass logistic regression function, and get another form of the classifier. 
 
 #### Ordinal Logistic Regression
 
-#### Multinomial Logistic Regression
+Besides, notice that the values of fit have ordinal meanings, we also try the ordinal regression. Here we adapt a classic way to implement our ordinal regression classifier, which is constructed by two binary logistic regression model. For binary classifier A, we want it to learn $P(fit > Small)$ i.e. $P(y > 0)$. Similarly, let B to learn $P(fit > True\ to\ Size)$, i.e. $P(y > 1)$. We can acheive this by re-mapping the label into {Small:0, True to Size:1, Large:1} and {Small:0, True to Size:0, Large:1} while training classifier A and B respectively. Finally, we can get the desired probability by:
+
+$$
+\begin{aligned}
+&P(y = 0) = 1 - P(y > 0)\\
+&P(y = 1) = P(y > 1) - P(y > 0)\\
+&P(y = 2) = P(y > 1)
+\end{aligned}
+$$
 
 ### Predicting Missing Labels
 
