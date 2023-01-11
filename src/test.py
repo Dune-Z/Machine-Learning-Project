@@ -36,9 +36,9 @@ def main(args):
     X = test_df_prep.drop('fit', axis=1).values
     y = test_df_prep['fit'].values
 
-    # To tackle class imbalance, we split the majority class (True to Size) into 5 folds,
+    # To tackle class imbalance, we split the majority class (True to Size) into 3 folds,
     # and train the model on each fold separately. When predicting on the test set,
-    # we aggregate the predictions from all 5 folds and vote.
+    # we aggregate the predictions from all 3 trained models and take the majority vote.
     y_preds = [model.predict(X) for model in models]
     y_preds = list(map(list, zip(*y_preds)))  # list transpose
     y_pred = np.array([max(set(votes), key=votes.count) for votes in y_preds])

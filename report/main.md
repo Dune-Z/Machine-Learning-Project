@@ -13,7 +13,7 @@ Lecturer: Jie Wang <br>
 Due: Jan. 11, 2023
 </div>
 <div style='float:right; text-align: right; font-size: 0.85em'>
-PB20114514, Yifei Zuo, 33% <br>
+PB20061254, Yifei Zuo, 33% <br>
 PB20061210, Yongfan Lai, 33% <br>
 PB20061372, Yunqin Zhu, 33% 
 </div>
@@ -73,7 +73,7 @@ Based on the current transformation on data format, we measure the relationship 
 ![output2](./figs/output2.jpg)
 <figcaption>Heatmap of correlation between numerical features</figcaption>
 
-Based on the result from melting experiment upon models trained with and without numerical features, we decided to remove all numerical features in sparse matrix resulted from one-hot encoder (which we will talk about it later) due to the fact that these features are not likely to gain attention from the model, e.g. `PCA` will remove these columns in highest priority. And the model trained without these features outperform the model with these.
+Trivial these numerical columns are, we still try to exploit latent relationship from it, because just discarding them seems brute. The desire to gain futher insight of the data results in the Detecting User Prototypes phase in our methodology, which will be explained in section.
 
 #### Categorical Features
 
@@ -114,9 +114,6 @@ Noting that we don't necessarily have to split the dominant class into `n` sampl
 
 <img src="./figs/Screenshot 2023-01-10 at 23.59.03.png" alt="Screenshot 2023-01-10 at 23.59.03" style="zoom:40%;" />
 <figcaption class='table-caption'>Fine-tuning of random split & aggregation method (one-hot encoded <code>item_name</code>)</figcaption>
-
-BERT 那里你看一下要不要加点公式
-还有图片的标题
 
 ## METHODOLOGY
 
@@ -212,10 +209,6 @@ This section contains methods we hasn't fully implemented from scratch due to th
 
 Our target it to leverage pre-trained model on Transformer and fill in the sample's empty `fit` value. This approach is promising because `rating` `review` and `review_summary` are not taken advantage of in our training yet. And the relationship of `fit` and these columns, especially `review` and `review` summary, are great. However these records are highly textual and language models based on Transformer are doing well in these circumstances while pre-trained models could dramatically reduce training expenses.
 
-#### Biderectional Encoder Representation from Transformers (BERT)
-
-Some basic description of BERT here. (If time permits)
-
 #### Implementation Details
 
 You might ask even if we already implement a Transformer from scratch, how can we load a pre-trained language model into our class object? The signature of class and function definition won't match! Well the point is there is bug inside `pickle` function which `torch.load()` make use of. By some hacking techniques like code injection we could eventually load the object into our own designed class object.
@@ -255,8 +248,14 @@ From the perspective of processing `item_name`, experiment shows that one-hot en
 
 From the perspective of balancing tactics, one certain thing is that both data augmentation and train split aggregation can address the imbalance problem to some extend. However, since two methods both can outperform the other while testing on some models, we cannot say which strategy is better. The performance of each definitely related to the hyperparameters in it. Since we have a thorough experiment on train split aggregation, and yet it reaches the best performance, we choose it as the final strategy.
 
-From the perspective of models, those implemented by ourselves can make use of the training data and make predictions rationally compared to random classifier. But because all the models are based on logistic regression and all construct linear boundaries, it is tough for them to find complex relationships beneath the data features, so the general performance of the models cannot meet with our expectation.
+From the perspective of models, those implemented by ourselves can make use of the training data and make predictions rationally compared to random classifier. But because all the models are based on logistic regression and all construct linear boundaries, it is tough for them to find complex relationships beneath the data features, so the general performance of the models has its limitation.
 
 Considering the model performance, finally we use the logistic regression model with BFGS optimizer, one-hot encoding the `iten_name` features and using train split aggregation to train our model.
 
 ## CONCLUSION
+
+In summary, we first cleanse the orginal data, fill the nan value and make values of each features in a uniform format, so that it can be input into the machine learning models. Then, after gainning an critical insight of the given data, we propose Leveraging Item Sizes and Detecting User Prototypes to exploit latent features. Later, we using two ways to address the data imbalance problem respectively and both are proved to make sense. Finally, we use the Logistic Regression to construct our model and carry out experiment to compare different model performance. Our final model reached the macro F1-score of 50%, which meets our expectation basically.
+
+However, the undertaking of the project was beset with challenges and difficulties.  
+
+Our team engaged in a comprehensive and collaborative effort to thoroughly explore the dataset, conduct relevant research on prior literature, and implement and analyze experimental methods. Each member of the team contributed to the fullest of their abilities. While the committed code ultimately presented only represents a subset of the full scope of our implemented solutions and the methods employed in the final submission may be more simplistic than our initial exploratory approaches, we felt quite content with our project due to this extend of devotion. Despite instances of disappointment and frustration arising from a lack of performance improvements in some of our more elaborate designs, the team remained resilient and actively encouraged one another to persevere in our efforts. We are deeply greatful to every member of our team, as well as our instructor and TAs, for their unwavering commitment and dedication to this course and project!
