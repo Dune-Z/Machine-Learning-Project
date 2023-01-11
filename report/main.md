@@ -47,6 +47,7 @@ The challenge is to handle the `bust_size`. We observe that a valid `bust_size` 
 After cleansing, the 4 numerical features that measures user's body characteristics approximately follow a normal distribution, as is shown in the figure below. We will normalize them to have zero mean and unit variance in the later steps.
 
 ![](figs/height_weight.svg)
+
 <figcaption>Violin plots of <code>weight</code>, <code>height</code>, <code>bust_size</code> and <code>cup_size</code></figcaption>
 
 #### Item Names
@@ -70,6 +71,7 @@ Last but not least, we extract some meaningful `size_suffix`s from the raw size 
 Among the other features, we note that `body_type` and `rented_for` are already clean categories and can be directly one-hot encoded. The 2 textual feedback features, i.e. `review` and `review_summary` have close relationship with `fit` and can only be used to predict missing labels in the training set (See Section 3.4 for details). We omitted their cleansing process here.
 
 ![](figs/rented_body.svg)
+
 <figcaption>Bar plots of <code>rented_for</code>, <code>body_type</code> and <code>size_main</code> (<code>size</code> without suffix)</figcaption>
 
 ### Exploratory Data Analysis
@@ -79,6 +81,7 @@ Among the other features, we note that `body_type` and `rented_for` are already 
 Based on the current transformation on data format, we measure the relationship among all features to further filter the dataset. First of all we look at numerical features. According to the literal meaning, features like `price`, `age` are less likely to impact the `fit` feature, and by calculating their correlation index, we found that actually none of these numerical features are highly related to `fit`. We also analyze the possible combination of features, e.g `bmi` in the first figure below.
 
 ![output2](./figs/output2.jpg)
+
 <figcaption>Heatmap of correlation between numerical features</figcaption>
 
 Trivial these numerical columns are, we still try to exploit latent relationship from it, because just discarding them seems brute. The desire to gain futher insight of the data results in the Detecting User Prototypes phase in our methodology, which will be explained in section 3.2.2.
@@ -116,9 +119,10 @@ This approach is based on the basis assumption that if an item is small for one 
 The second approach is to split the dominant class `True to Size` into $n$ different group randomly, and concatenate them with $n$ identical copy of the others, forming into $n$ generated datasets. Then we feed them into $n$ different workers which train and result in $n$ models. We use each model to predict its own predictions and we sent them into Aggregator, who will give the final predictions by voting from the $n$ workers' predictions.
 
 ![Screenshot 2023-01-10 at 22.25.05](./figs/Screenshot%202023-01-10%20at%2022.25.05.png)
+
 <figcaption>Random split & aggregation method</figcaption>
 
-Noting that we don't necessarily have to split the dominant class into `n` samples so that the number of samples in each group is approximately identical to the others. Due to the fact that this task is relatively hard and our model won't give a tremendously impressing representation, we do need to fine tune the parameter `n`. A reasonable assumption is that by relatively giving more samples in dominant class, we result will be better because there will be more samples fall into this class. Here’s some result of parameter search trained on  `LogisticRegression` model: (Noting that we could not reach such performance by simply do one hot encoding due to the fact that we may encounter new value of `item_name`, this is just a demostration of how we fine tune this parameter.)
+Noting that we don't necessarily have to split the dominant class into `n` samples so that the number of samples in each group is approximately identical to the others. Due to the fact that this task is relatively hard and our model won't give a tremendously impressing representation, we do need to fine tune the parameter `n`. A reasonable assumption is that by relatively giving more samples in dominant class, we result will be better because there will be more samples fall into this class. Here’s some result of parameter search trained on `LogisticRegression` model: (Noting that we could not reach such performance by simply do one hot encoding due to the fact that we may encounter new value of `item_name`, this is just a demostration of how we fine tune this parameter.)
 
 <img src="./figs/Screenshot 2023-01-10 at 23.59.03.png" alt="Screenshot 2023-01-10 at 23.59.03" style="zoom:40%;" />
 <figcaption class='table-caption'>Fine-tuning of random split & aggregation method (one-hot encoded <code>item_name</code>)</figcaption>
@@ -127,13 +131,14 @@ Noting that we don't necessarily have to split the dominant class into `n` sampl
 
 ### Overview
 
-The overall architecture of our model is shown in the following figure. We model the fit feedback prediction task in two methods: (1) Multiclass classfication problem; (2) Ordinal regression problem. We use multinomial Logistic Regression and ordinal Logistic Regression to solve the problem respectively and compare the performance. 
+The overall architecture of our model is shown in the following figure. We model the fit feedback prediction task in two methods: (1) Multiclass classfication problem; (2) Ordinal regression problem. We use multinomial Logistic Regression and ordinal Logistic Regression to solve the problem respectively and compare the performance.
 
 Feature engineering is also the key part of our model. Based on the analysis that `item_name` is the most important categorical feature, we adopt a latent representaion model that learns the true size of each item, i.e. item vectors in the embedding space. We also attempt to enhance the representation of each user by applying K-Prototype clustering on the user data and use the cluster centroids as additional user vectors.
 
 Moreover, to utilize the 30% training data with missing labels, we experiment on leveraging pre-trained BERT models to classify the textual feedback and fill in the `fit` values.
 
 ![architecture](./figs/arch.drawio.svg)
+
 <figcaption>The architecture of our proposed model.</figcaption>
 
 Our model is demonstrated to improve the performance when experimented on each separate component. Unfortunately, due to the limit of time, energy and resource, we are not able to fully implement the algorithms and integrate them all with only whitelist libraries.
@@ -168,13 +173,13 @@ $$
 \end{cases}
 $$
 
-Note that, in Prob. (1), we add the constraint $\mathbf{d}_p \ge \mathbf{0}$ to capture the monotonicity of the true size $\mathbf{v}_i$ with respect to the size bias $\epsilon_i$, and also $\mathbf{w} \ge \mathbf{0}$ to ensure the monotonicity of the predicted fitness scores with respect to the item size; that is, if a size is `Large` for some user, then any bigger size would also be `Large`. These two constraints are trivial for the Projected Gradient Descent (PGD) algorithm, since the projection operator onto the non-negative orthant is a simple element-wise $\max\{0,\cdot\}$. 
+Note that, in Prob. (1), we add the constraint $\mathbf{d}_p \ge \mathbf{0}$ to capture the monotonicity of the true size $\mathbf{v}_i$ with respect to the size bias $\epsilon_i$, and also $\mathbf{w} \ge \mathbf{0}$ to ensure the monotonicity of the predicted fitness scores with respect to the item size; that is, if a size is `Large` for some user, then any bigger size would also be `Large`. These two constraints are trivial for the Projected Gradient Descent (PGD) algorithm, since the projection operator onto the non-negative orthant is a simple element-wise $\max\{0,\cdot\}$.
 
 Therefore, we implement PGD algorithm to optimize the objective in rounds: (1) Initialize $\mathbf{w}$, $b_1$, $b_2$ randomly, $\mathbf{d}_p = \mathbf{0}$, and $\mathbf{v}_p$ as the mean of the true sizes of all users that have rent the parent item $p$; (2) In odd round, we fix the parameters $\mathbf{w}$, $b_1$, $b_2$ and optimize $\mathbf{v}_p$ and $\mathbf{d}_p$; (3) In even round, we fix $\mathbf{v}_p$ and $\mathbf{d}_p$ and optimize $\mathbf{w}$, $b_1$, $b_2$. We repeat the process for 10 rounds and obtain the final parameters $\mathbf{v}_p^*$, $\mathbf{d}_p^*$. See the `ItemVectorOptimizer` class in `preprocess.py` for more details.
 
 #### Detecting User Prototypes
 
-In this section, we will discuss the technique we use to enhance the representation of each user. Although the training data already contains the true size of each user, i.e. `weight`, `height`, `bust_size` and `cup_size`, these features are unable to express the heterogeneity among different users (e.g. personal preference), let alone considerable amount of missing values. 
+In this section, we will discuss the technique we use to enhance the representation of each user. Although the training data already contains the true size of each user, i.e. `weight`, `height`, `bust_size` and `cup_size`, these features are unable to express the heterogeneity among different users (e.g. personal preference), let alone considerable amount of missing values.
 
 Following the same logic as we learn the latent variables for item sizes, it is reasonable to group the transactions by each user and learn user-specific features. However, unlike the `item_name`, the column `user_name` cannot uniquely identify a user. Hence, instead of learning the exact latent representation of each user, we attempt to learn several user prototypes by performing clustering algorithms on the user data, and use the cluster centroid as the user vector.
 
@@ -183,7 +188,7 @@ Besides numerical body measurements, our clustering algorithm should be aware of
  <img src="./figs/user-results.png" alt="user-results" style="zoom:50%;" />
 <figcaption class='table-caption'>Fine-tuning of K-Prototype clustering (one-hot encoded <code>item_name</code>)</figcaption>
 
-These results are satisfactory if we ignore the computational cost of the algorithm. Unfortunately, it cost hours to cluster on the entire dataset using the existing `kmodes` library even after enabling parallel computing. Since the improved f1-score on the validation set is not significant, we decide not to implement this technique in our final model.
+These results are satisfactory if we ignore the computational cost of the algorithm. Unfortunately, it cost hours to cluster on the entire dataset using the existing `kmodes` library even after enabling parallel computing. Since the improved F1-score on the validation set is not significant, we decide not to implement this technique in our final model.
 
 ### Fit Feedback Classification
 
@@ -231,7 +236,6 @@ It is a good result but not satisfying out expectation. We then perform a `delta
 <img src="./figs/Screenshot 2023-01-10 at 23.44.53.png" alt="Screenshot 2023-01-10 at 23.44.53" style="zoom: 33%;" />
 <figcaption>BERT encoder training and delta fine-tuning</figcaption>
 
-
 By filling the empty `fit` value, we trained our models on filled dataset and each model get a fairly better result. However, as mentioned above, we have not implement it using only whitelist libraries, so we did not use the method in our submission model (though there is a file named `bert.py`, we did not import it in our main file).
 
 ## EXPERIMENTS
@@ -244,15 +248,15 @@ In experiment phase, we employ the data cleanse and feature engineering method a
 
 All the experiment results are presented at the table below, models performace are evaluated by the macro F1-score.
 
-<figcaption class='table-caption'>Experimental results</figcaption>
+<figcaption class='table-caption'>Experimental results (macro F1-score on the validation set)</figcaption>
 
 | Item Name | Balancing Tactics | LG (GD) | LG (BFGS) |  OR  | Random |
 | :-------: | :---------------: | :-----: | :-------: | :--: | :----: |
 |   Drop    |     Data Aug.     |  0.34   |   0.35    | 0.34 |  0.29  |
 |   Drop    |    Split Aggr.    |  0.32   |   0.38    | 0.31 |  0.29  |
 |   Drop    |       None        |  0.30   |   0.30    | 0.30 |  0.29  |
-|  One-Hot  |     Data Aug.     |  0.51   |   0.53    | 0.52 |  0.29  |
-|  One-Hot  |    Split Aggr.    |  0.54   |   0.52    | 0.51 |  0.29  |
+|  One-Hot  |     Data Aug.     |  0.42   |   0.48    | 0.39 |  0.29  |
+|  One-Hot  |    Split Aggr.    |  0.52   | **0.55**  | 0.50 |  0.29  |
 |  One-Hot  |       None        |  0.30   |   0.30    | 0.30 |  0.29  |
 
 From the perspective of processing `item_name`, experiment shows that one-hot encoding it can lift the model performance hugely. This result further proved our conclusion drawn in Data Analysis phase that `item_name` is the key point and it is even more important than the features we extracted from it.
@@ -267,6 +271,6 @@ Considering the model performance, finally we use the logistic regression model 
 
 In summary, we first cleanse the orginal data, fill the nan value and make values of each features in a uniform format, so that it can be input into the machine learning models. Then, after gaining a critical insight of given data, we propose Leveraging Item Sizes and Detecting User Prototypes to exploit latent features. Later, we used two ways to address the data imbalance problem respectively and both are proved to make sense. Finally, we use the Logistic Regression to construct our model and carry out experiment to compare different model performance. In addtion, we use BERT model to predict the missing label for about 30% of the training data. Despite we do not use it in the end because of the library whitelist, we find it practical in the real-world recommending tasks. Our final model reached the macro F1-score of 50%, which meets our expectation basically.
 
-However, the undertaking of the project was beset with challenges and difficulties.  
+However, the undertaking of the project was beset with challenges and difficulties.
 
 Our team engaged in a comprehensive and collaborative effort to thoroughly explore the dataset, conduct relevant research on prior literature, and implement and analyze experimental methods. Each member of the team contributed to the fullest of their abilities. While the committed code ultimately presented only represents a subset of the full scope of our implemented solutions and the methods employed in the final submission may be more simplistic than our initial exploratory approaches, we felt quite content with our project due to this extend of devotion. Despite instances of disappointment and frustration arising from a lack of performance improvements in some of our more elaborate designs, the team remained resilient and actively encouraged one another to persevere in our efforts. We are deeply greatful to every member of our team, as well as our instructor and TAs, for their unwavering commitment and dedication to this course and project!
