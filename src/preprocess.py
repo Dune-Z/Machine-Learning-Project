@@ -688,8 +688,8 @@ class OneHotEncoder(DataTransformer):
 
         def get_dummies_1d(s: pd.Series) -> pd.DataFrame:
             cats = self.categories[s.name]
-            s = s.astype(pd.CategoricalDtype(categories=cats))
-            codes, _ = pd.factorize(s, sort=True)
+            s = s.astype(pd.CategoricalDtype(categories=cats, ordered=True))
+            codes = s.cat.codes.tolist()
             out_cols = [f'{s.name}_{cat}' for cat in cats]
             dummy_mat = np.eye(len(cats), dtype=np.uint8).take(codes, axis=1).T
             dummy_mat[codes == -1] = 0
