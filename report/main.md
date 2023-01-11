@@ -144,7 +144,13 @@ In preceding part, we already have a penetrating insight of our tasks. As for th
 
 #### Multinomial Logistic Regression
 
-At first, we implemented the classifier with gradient descent algorithm. However, its performance not so good as the model from sklearn library. So we imitate the sklearn implementation, using BFGS method in scipy.optimize to minimize the multiclass logistic regression function, and get another form of the classifier. 
+At first, we implemented the classifier with gradient descent algorithm. However, its performance not so good as the model from sklearn library. So we imitate the sklearn implementation, using BFGS method in scipy.optimize to minimize the multiclass logistic regression function, and get another form of the classifier. The loss function is formulated as:
+
+$$
+l(w, \alpha) = -\frac1n \sum_{i=1}^n Softmax(x_i\cdot w^T)_{y_i} + \frac12 \alpha ||w||^2
+$$
+
+where $w \in \R^{3\times d}$ and $d$ is the number of features, $y_i$ at subscript means $y_i$th component, $||\cdot||$ is L2 norm and $\alpha$ as its regularization constant.
 
 #### Ordinal Logistic Regression
 
