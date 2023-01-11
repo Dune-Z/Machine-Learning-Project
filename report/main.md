@@ -110,7 +110,7 @@ The second approach is to split the dominant class `True to Size` into $n$ diffe
 ![Screenshot 2023-01-10 at 22.25.05](./figs/Screenshot%202023-01-10%20at%2022.25.05.png)
 <figcaption>Random split & aggregation method</figcaption>
 
-Noting that we don't necessarily have to split the dominant class into `n` samples so that the number of samples in each group is approximately identical to the others. Due to the fact that this task is relatively hard and our model won't give a tremendously impressing representation, we do need to fine tune the parameter `n`. A reasonable assumption is that by relatively giving more samples in dominant class, we result will be better because there will be more samples fall into this class. Here’s some result of parameter search trained on  `LogisticRegression` model: (Noting that we could not reach such performance by simply do one hot encoding bue to the fact that we may encounter new value of `item_name`, this is just a demostration of how we fine tune this parameter.)
+Noting that we don't necessarily have to split the dominant class into `n` samples so that the number of samples in each group is approximately identical to the others. Due to the fact that this task is relatively hard and our model won't give a tremendously impressing representation, we do need to fine tune the parameter `n`. A reasonable assumption is that by relatively giving more samples in dominant class, we result will be better because there will be more samples fall into this class. Here’s some result of parameter search trained on  `LogisticRegression` model: (Noting that we could not reach such performance by simply do one hot encoding due to the fact that we may encounter new value of `item_name`, this is just a demostration of how we fine tune this parameter.)
 
 <img src="./figs/Screenshot 2023-01-10 at 23.59.03.png" alt="Screenshot 2023-01-10 at 23.59.03" style="zoom:40%;" />
 <figcaption class='table-caption'>Fine-tuning of random split & aggregation method (one-hot encoded <code>item_name</code>)</figcaption>
@@ -247,13 +247,13 @@ All the experiment results are presented at the table below, models performace a
 |   Drop    |     Data Aug.     |  0.34   |   0.35    | 0.34 |  0.29  |
 |   Drop    |    Split Aggr.    |  0.32   |   0.38    | 0.31 |  0.29  |
 |   Drop    |       None        |  0.30   |   0.30    | 0.30 |  0.29  |
-|  One-Hot  |     Data Aug.     |         |           |      |  0.29  |
-|  One-Hot  |    Split Aggr.    |         |           |      |  0.29  |
-|  One-Hot  |       None        |         |           |      |  0.29  |
+|  One-Hot  |     Data Aug.     |  0.51   |   0.53    | 0.52 |  0.29  |
+|  One-Hot  |    Split Aggr.    |  0.54   |   0.52    | 0.51 |  0.29  |
+|  One-Hot  |       None        |  0.30   |   0.30    | 0.30 |  0.29  |
 
 From the perspective of processing `item_name`, experiment shows that one-hot encoding it can lift the model performance hugely. This result further proved our conclusion drawn in Data Analysis phase that `item_name` is the key point and it is even more important than the features we extracted from it.
 
-From the perspective of balancing tactics, one certain thing is that both data augmentation and train split aggregation can address the imbalance problem to some extend. However, since two methods both can outperform the other while testing on some models, we cannot say which strategy is better. The performance of each definitely related to the hyperparameters in it, but due to the time limit, we are regret to experiment on them.
+From the perspective of balancing tactics, one certain thing is that both data augmentation and train split aggregation can address the imbalance problem to some extend. However, since two methods both can outperform the other while testing on some models, we cannot say which strategy is better. The performance of each definitely related to the hyperparameters in it. Since we have a thorough experiment on train split aggregation, and yet it reaches the best performance, we choose it as the final strategy.
 
 From the perspective of models, those implemented by ourselves can make use of the training data and make predictions rationally compared to random classifier. But because all the models are based on logistic regression and all construct linear boundaries, it is tough for them to find complex relationships beneath the data features, so the general performance of the models cannot meet with our expectation.
 
