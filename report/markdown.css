@@ -1,5 +1,6 @@
 /* https://raw.githubusercontent.com/sindresorhus/github-markdown-css/main/github-markdown.css */
 @import url("https://cdn.jsdelivr.net/gh/vsalvino/computer-modern@main/fonts/serif.css");
+@import url("https://cdn.jsdelivr.net/gh/vsalvino/computer-modern@main/fonts/typewriter.css");
 /* @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC&display=swap"); */
 @counter-style decimal-parentheses {
     system: extends decimal;
@@ -204,6 +205,10 @@
     border-bottom: 1px solid var(--color-fg-default);
 }
 .github-markdown-body code {
+    margin: 0;
+    padding: 0;
     border-radius: 0%;
-    background-color: #adadad20
+    font-size: 1em;
+    font-family: 'Computer Modern Typewriter';
+    background-color: transparent;
 }
