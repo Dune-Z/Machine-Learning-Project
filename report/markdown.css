@@ -116,8 +116,8 @@
     border-bottom: 0;
 }
 .github-markdown-body li {
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
+    margin-top: 0em;
+    margin-bottom: 0em;
 }
 .github-markdown-body li p {
     text-indent: 0;
@@ -125,7 +125,7 @@
     margin-bottom: 0;
 }
 .github-markdown-body li + li {
-    margin-top: 0.5em;
+    margin-top: 0em;
 }
 .github-markdown-body ul {
     list-style-type: disc;

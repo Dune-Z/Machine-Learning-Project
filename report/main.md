@@ -19,12 +19,17 @@ PB20061372, Yunqin Zhu, 33%
 <br><br>
 <hr style='margin-top:1.25em'>
 
-## PROBLEM SETTINGS
+## INTRODUCTION
 
-
-
+Recommending clothes of suitable sizes to customers based on the information of clothes and users are very important for E-commerce platforms. In this project, we implement several classifiers to predict customers’ fit feedback based on a dataset collected from RentTheRunWay.
 
 ## PREPARATION
+
+The training dataset contains 87766 samples, each of which has 14 features and 1 label. We summarize these records as follows:
+
+(1) Item attributes, i.e. `item_name`, `size` and `price`; (2) User attributes. The first one is `user_name`, which is excluded in the test set. The others describe the body characteristics of each user: `age`, `height`, `weight`, `body_type` and `bust_size`; (3) Transaction attributes, i.e. `rented_for`, `usually_wear`; (4) Feedback, i.e. `fit`, `review_summary` `review` and `rating`, among which `fit` is the target variable we want to predict, and the other three are supposed to be inaccessible on the test set.
+
+By observing that most of the inputs has missing values and inconsistent formats, we need to design a thorough data cleansing pipeline that converts the raw data into either categorical or numerical variables we can leverage for training. We also need to deal with the data imbalance issue, since the number of samples with `fit = True to Size`, consisting of 70% of the whole dataset, is much larger than the other two classes. These challenges are discussed in detail in the following sections.
 
 ### Data Cleansing
 
