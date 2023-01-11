@@ -25,10 +25,10 @@
     font-family: "Computer Modern Serif", "Times New Roman", Times, Baskerville,
         Georgia, "SimSun", "Source Han Serif SC", "STSong", "Noto Serif SC",
         serif;
-    max-width: 7.2in;
+    max-width: 8in;
     margin: 0.5in auto;
-    padding-left: 0.65in;
-    padding-right: 0.65in;
+    padding-left: 0.25in;
+    padding-right: 0.25in;
     line-height: 1.25em;
 }
 .github-markdown-body h1 {
@@ -93,7 +93,7 @@
     text-indent: 0em;
 }
 .github-markdown-body p {
-    text-indent: 2em;
+    text-indent: 1em;
     text-align: justify;
     margin-bottom: 0;
 }
@@ -154,7 +154,7 @@
     padding: 0;
     margin: 16px auto;
     width: max-content;
-    max-width: 90%;
+    max-width: 100%;
     position: relative;
     overflow: visible;
 }

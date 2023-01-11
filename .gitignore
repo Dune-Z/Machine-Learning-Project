@@ -5,3 +5,4 @@ data/renttherunway_data.json.gz
 data/train_data.json
 data/train_data_all_filled.json
 logs.log
+.opp_tmp

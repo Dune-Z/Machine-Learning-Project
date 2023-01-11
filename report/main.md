@@ -44,6 +44,11 @@ We also notice that there are some anomalous values, i.e. `age` $\le 5$ or $\ge 
 
 The challenge is to handle the `bust_size`. We observe that a valid `bust_size` alway contains two part: (1) number part in inches; (2) letter part, implying the `cup_size`. Since these two parts are different measurements of women busts, it is necessary to split them into 2 features. The `cup_size`s, ordered as `AA` < `A` < `B` < `C` < `D` < `D+` < `DD` < `DDD/E` < `F` < `G` < `H` < `I` < `J`, are ordinally encoded as 0 $\sim$ 12. We now have `bust_size` in 2 numerical values.
 
+After cleansing, the 4 numerical features that measures user's body characteristics approximately follow a normal distribution, as is shown in the figure below. We will normalize them to have zero mean and unit variance in the later steps.
+
+![](figs/height_weight.svg)
+<figcaption>Violin plots of <code>weight</code>, <code>height</code>, <code>bust_size</code> and <code>cup_size</code></figcaption>
+
 #### Item Names
 
 Next, we take a look at the categorical features. For `item_name`, we notice that it demonstrates some common patterns and can be utilized to extract extra infomation; that is, the first line of `item_name` typically contains the brand name, while the second line contains the product name with the last word indicating its category, e.g. `Jumpsuit`, `Romper`, `Skirt`, `Top`, `Blouse`. Therefore, we parse each `item_name` string and yield two new features: `brand` and `category`. We also take into account and handle the samples that have no `brand` information.
@@ -64,6 +69,9 @@ Last but not least, we extract some meaningful `size_suffix`s from the raw size 
 
 Among the other features, we note that `body_type` and `rented_for` are already clean categories and can be directly one-hot encoded. The 2 textual feedback features, i.e. `review` and `review_summary` have close relationship with `fit` and can only be used to predict missing labels in the training set (See Section 3.4 for details). We omitted their cleansing process here.
 
+![](figs/rented_body.svg)
+<figcaption>Bar plots of <code>rented_for</code>, <code>body_type</code> and <code>size_main</code> (<code>size</code> without suffix)</figcaption>
+
 ### Exploratory Data Analysis
 
 #### Numerical Features
@@ -73,7 +81,7 @@ Based on the current transformation on data format, we measure the relationship 
 ![output2](./figs/output2.jpg)
 <figcaption>Heatmap of correlation between numerical features</figcaption>
 
-Trivial these numerical columns are, we still try to exploit latent relationship from it, because just discarding them seems brute. The desire to gain futher insight of the data results in the Detecting User Prototypes phase in our methodology, which will be explained in section.
+Trivial these numerical columns are, we still try to exploit latent relationship from it, because just discarding them seems brute. The desire to gain futher insight of the data results in the Detecting User Prototypes phase in our methodology, which will be explained in section 3.2.2.
 
 #### Categorical Features
 
@@ -216,10 +224,13 @@ You might ask even if we already implement a Transformer from scratch, how can w
 We basically convert the format into series of sentences containing both header of column and content in the cell, separated by special token. The we feed them into a language model (we use `roberta-base`) and trained the model. The performance of the model increases from 69% of filling `f1_score` to 84%.
 
 <img src="./figs/Screenshot 2023-01-10 at 23.28.08.png" alt="Screenshot 2023-01-10 at 23.28.08" style="zoom: 33%;" />
+<figcaption>Input format conversion of tabular dataset</figcaption>
 
 It is a good result but not satisfying out expectation. We then perform a `delta-tuning` trick onto the model and improve the result into 94% in filling `f1_score`. The tuning model is basically the trained encoder plus an additional randomly initialized MLP. When training the tuned model we need to freeze the encoder and only update the weight in the MLP layers.
 
 <img src="./figs/Screenshot 2023-01-10 at 23.44.53.png" alt="Screenshot 2023-01-10 at 23.44.53" style="zoom: 33%;" />
+<figcaption>BERT encoder training and delta fine-tuning</figcaption>
+
 
 By filling the empty `fit` value, we trained our models on filled dataset and each model get a fairly better result. However, as mentioned above, we have not implement it using only whitelist libraries, so we did not use the method in our submission model (though there is a file named `bert.py`, we did not import it in our main file).
 
@@ -248,13 +259,13 @@ From the perspective of processing `item_name`, experiment shows that one-hot en
 
 From the perspective of balancing tactics, one certain thing is that both data augmentation and train split aggregation can address the imbalance problem to some extend. However, since two methods both can outperform the other while testing on some models, we cannot say which strategy is better. The performance of each definitely related to the hyperparameters in it. Since we have a thorough experiment on train split aggregation, and yet it reaches the best performance, we choose it as the final strategy.
 
-From the perspective of models, those implemented by ourselves can make use of the training data and make predictions rationally compared to random classifier. But because all the models are based on logistic regression and all construct linear boundaries, it is tough for them to find complex relationships beneath the data features, so the general performance of the models has its limitation.
+From the perspective of models, those implemented by ourselves can make use of the training data and make predictions rationally compared to random classifier. But because all the models are based on logistic regression so all construct linear boundaries, it is tough for them to find complex relationships beneath the features, so the general performance of the models has its limitation.
 
 Considering the model performance, finally we use the logistic regression model with BFGS optimizer, one-hot encoding the `iten_name` features and using train split aggregation to train our model.
 
 ## CONCLUSION
 
-In summary, we first cleanse the orginal data, fill the nan value and make values of each features in a uniform format, so that it can be input into the machine learning models. Then, after gainning an critical insight of the given data, we propose Leveraging Item Sizes and Detecting User Prototypes to exploit latent features. Later, we using two ways to address the data imbalance problem respectively and both are proved to make sense. Finally, we use the Logistic Regression to construct our model and carry out experiment to compare different model performance. Our final model reached the macro F1-score of 50%, which meets our expectation basically.
+In summary, we first cleanse the orginal data, fill the nan value and make values of each features in a uniform format, so that it can be input into the machine learning models. Then, after gaining a critical insight of given data, we propose Leveraging Item Sizes and Detecting User Prototypes to exploit latent features. Later, we used two ways to address the data imbalance problem respectively and both are proved to make sense. Finally, we use the Logistic Regression to construct our model and carry out experiment to compare different model performance. In addtion, we use BERT model to predict the missing label for about 30% of the training data. Despite we do not use it in the end because of the library whitelist, we find it practical in the real-world recommending tasks. Our final model reached the macro F1-score of 50%, which meets our expectation basically.
 
 However, the undertaking of the project was beset with challenges and difficulties.  
 
