@@ -41,6 +41,7 @@ class LogisticClassifier():
         self.alpha = alpha
 
     def fit(self, X: np.ndarray, y: np.ndarray, method='BFGS'):
+        X = np.hstack((np.ones((X.shape[0], 1)), X))
         self.d = X.shape[1]
         initial_w = np.random.randn(self.num_class * self.d)
         res = minimize(multiclass_logreg,
@@ -56,6 +57,7 @@ class LogisticClassifier():
         """
         Predict probability of each class
         """
+        X = np.hstack((np.ones((X.shape[0], 1)), X))
         logits = X @ self.w.T
         return softmax(logits)
 
