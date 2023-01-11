@@ -47,6 +47,7 @@ class LogisticClassifier():
                        initial_w,
                        args=(X, y, self.num_class, self.alpha),
                        jac=grad_multiclass_logreg,
+                       tol=1e-4,
                        method=method)
 
         self.w = res.x.reshape((self.num_class, self.d))
