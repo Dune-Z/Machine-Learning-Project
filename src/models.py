@@ -12,39 +12,40 @@ def softmax(z):
 
 
 # Define the multiclass logistic regression function to be optimized
-def multiclass_logreg(w, X, y, num_classes):
+def multiclass_logreg(w, X, y, num_classes, alpha):
     m, n = X.shape
     w = w.reshape((num_classes, n))
     logits = X @ w.T
     prob = softmax(logits)
-    ll = -np.mean(np.log(prob[range(m), y]))
+    ll = -np.mean(np.log(prob[range(m), y])) + 0.5 * alpha * np.sum(w ** 2)
     return ll
 
 
 # Define the gradient of the multiclass logistic regression function
-def grad_multiclass_logreg(w, X, y, num_classes):
+def grad_multiclass_logreg(w, X, y, num_classes, alpha):
     m, n = X.shape
     w = w.reshape((num_classes, n))
     logits = X @ w.T
     prob = softmax(logits)
     prob[range(m), y] -= 1
-    grad = prob.T @ X / m
+    grad = prob.T @ X / m + alpha * w
     return grad.ravel()
 
 
 class LogisticClassifier():
 
-    def __init__(self, num_class=3) -> None:
+    def __init__(self, num_class=3, alpha=0.1) -> None:
         self.w = None
         self.d = None
         self.num_class = num_class
+        self.alpha = alpha
 
     def fit(self, X: np.ndarray, y: np.ndarray, method='BFGS'):
         self.d = X.shape[1]
         initial_w = np.random.randn(self.num_class * self.d)
         res = minimize(multiclass_logreg,
                        initial_w,
-                       args=(X, y, self.num_class),
+                       args=(X, y, self.num_class, self.alpha),
                        jac=grad_multiclass_logreg,
                        method=method)
 
