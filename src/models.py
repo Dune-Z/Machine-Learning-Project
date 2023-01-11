@@ -416,7 +416,7 @@ class OrdinalClassifier:
 
     def fit(self, X: np.ndarray, y: np.ndarray, w0_high=None, w0_low=None):
 
-        y_low = (y == 0).astype(int)
+        y_low = (y != 0).astype(int)
         y_high = (y == 2).astype(int)
 
         if w0_high == None:
