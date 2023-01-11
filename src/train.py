@@ -9,29 +9,49 @@ from utils import fetch_train_data, random_split
 from models import *
 from preprocess import *
 
-model = OrdinalClassifier()
+model = LogisticClassifier()
 fit_args = {}
 
-prep = Preprocessor(pipeline=[
-    DropColumns(
-        cols=['user_name', 'review', 'review_summary', 'rating', 'item_name']),
-    OneHotEncoder(cols=[
-        'size_scheme', 'size_main', 'size_suffix', 'rented_for', 'body_type'
-    ],
-                  name='one_hot'),
-    OrdinalEncoder(cols=['fit', 'cup_size']),
-    StandardScaler(cols=['age', 'weight', 'height', 'bust_size', 'cup_size']),
-    TargetEncoder(cols=['brand', 'category', 'size'],
-                  target_cols=['weight', 'height', 'bust_size', 'cup_size'],
-                  name='target_encoder'),
-    DropColumns(cols=['brand', 'category', 'size']),
-    MinMaxScaler(cols=['price', 'usually_wear']),
-    SelectOutputColumns(
-        target='target_encoder'
-    ),  # append the output of 'one_hot' to the input of the next transformer
-    MeanImputer(cols=['age', 'weight', 'height', 'bust_size', 'cup_size']),
-    MedianImputer(cols=['usually_wear']),
-])
+prep = Preprocessor(
+    pipeline=[
+        ##
+        DropColumns(cols=['user_name', 'review', 'review_summary', 'rating']),
+        HandleSizeMapping(),  # handle size mapping
+        OrdinalEncoder(cols=['fit', 'item_name', 'cup_size']),  # (necessary)
+        MeanImputer(
+            cols=['weight', 'height', 'bust_size', 'cup_size']),  # (necessary)
+        ComputeItemVectors(),  # compute item vectors
+        ##
+        DropColumns(cols=['size_scheme', 'size']),
+        OneHotEncoder(cols=['size_suffix', 'rented_for', 'body_type']),
+        StandardScaler(cols=[
+            'weight', 'height', 'bust_size', 'cup_size', 'item_weight',
+            'item_height', 'item_bust_size', 'item_cup_size'
+        ]),
+        MinMaxScaler(cols=['age', 'price', 'usually_wear']),
+        ConstantScaler(
+            cols=[
+                'age', 'price', 'usually_wear', 'weight', 'height',
+                'bust_size', 'cup_size', 'item_weight', 'item_height',
+                'item_bust_size', 'item_cup_size'
+            ],
+            value=1e-4
+        ),  # Multiplying by 1e-4 to downscale the effect of these features
+        TargetEncoder(
+            cols=['brand', 'category', 'size_main'],
+            target_cols=['weight', 'height', 'bust_size', 'cup_size'],
+            name='target_encoder'),
+        DropColumns(cols=['brand', 'category', 'size_main']),
+        SelectOutputColumns(
+            target='target_encoder'
+        ),  # append the output of 'target_encoder' to the input of the next transformer
+        MeanImputer(cols=['age', 'weight', 'height', 'bust_size', 'cup_size']),
+        MedianImputer(cols=['price', 'usually_wear']),
+        OneHotEncoder(cols=['item_name']),
+        AugmentData(target_cols=['weight', 'height', 'bust_size', 'cup_size'],
+                    ratio_small=0.2,
+                    ratio_large=0.15),
+    ])
 
 
 def parse_arguments():
@@ -69,8 +89,8 @@ def main(args):
     save(prep, f'{args.out_dir}/preprocessor.pt')
 
     # Get feature matrix and target vector
-    X = train_df_prep.drop('fit', axis=1).values
-    y = train_df_prep['fit'].values
+    X = train_df_prep.drop('fit', axis=1).to_numpy(dtype=np.float16)
+    y = train_df_prep['fit'].to_numpy(dtype=np.float16)
 
     # To tackle class imbalance, we split the majority class (True to Size) into 3 folds,
     # and train the model on each fold separately. When predicting on the test set,
